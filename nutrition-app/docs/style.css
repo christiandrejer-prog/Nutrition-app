@@ -1,0 +1,112 @@
+body {
+    font-family: Arial, sans-serif;
+    margin: 40px;
+    background-color: #f5f5f5;
+}
+
+h1 {
+    color: #333;
+    text-align: center;
+}
+
+h2 {
+    color: #555;
+    border-bottom: 2px solid #ddd;
+    padding-bottom: 5px;
+}
+
+section {
+    background-color: white;
+    padding: 20px;
+    margin-bottom: 30px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+input, select {
+    padding: 8px;
+    margin: 5px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+button {
+    padding: 8px 12px;
+    cursor: pointer;
+    background-color: #cccccc;
+    color: black;
+    border: none;
+    border-radius: 4px;
+    margin: 5px;
+}
+
+button:hover {
+    background-color: #bbbbbb;
+}
+
+.green-button {
+    padding: 8px 12px;
+    cursor: pointer;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    margin: 5px;
+}
+
+.green-button:hover {
+    background-color: #45a049;
+}
+
+.red-button {
+    padding: 8px 12px;
+    cursor: pointer;
+    background-color: #f44336;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    margin: 5px;
+}
+
+.red-button:hover {
+    background-color: #d32f2f;
+}
+
+ul {
+    list-style-type: none;
+    padding: 0;
+}
+
+li {
+    background-color: #f9f9f9;
+    margin: 5px 0;
+    padding: 10px;
+    border-radius: 4px;
+}
+
+#foodDetails, #mealDetails {
+    background-color: #e8f5e8;
+    padding: 15px;
+    border-radius: 4px;
+    margin-top: 10px;
+}
+
+/* Barcode scanner styles */
+#interactive.viewport {
+    position: relative;
+    width: 100%;
+    height: 300px;
+    overflow: hidden;
+    border: 1px solid #ddd;
+}
+
+#interactive.viewport > canvas, #interactive.viewport > video {
+    max-width: 100%;
+    width: 100%;
+}
+
+.canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+}
