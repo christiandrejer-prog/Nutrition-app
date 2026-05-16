@@ -12,7 +12,7 @@ from app.utils.energy_constants import calculate_energy_from_macros
 
 from app.schemas.meal_schema import MealCreate, MealAddFood, MealUpdate
 
-router = APIRouter(prefix="/meals", tags=["Meals"])
+router = APIRouter(tags=["Meals"])
 
 
 
