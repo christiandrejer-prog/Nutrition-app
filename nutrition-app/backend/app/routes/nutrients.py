@@ -22,7 +22,7 @@ class NutrientUpdate(BaseModel):
     name: str
     unit: str
 
-router = APIRouter(prefix="/nutrients", tags=["Nutrients"])
+router = APIRouter(tags=["Nutrients"])
 
 @router.post("/", response_model=NutrientResponse)
 def create_nutrient(nutrient: NutrientCreate, db: Session = Depends(get_db)):
