@@ -128,6 +128,11 @@ let editingFoods = false;
 let editingMeals = false;
 let editingMealItems = false;
 let editingFoodDetails = false;
+
+// Delete mode flags
+let consumedMealsDeleteMode = false;
+
+// State for database search modals
 let databaseSearchState = { type: 'foods', query: '', page: 1, pageSize: 10, results: [] };
 
 // Initialize the app
@@ -430,7 +435,6 @@ function registerSidebarHandlers() {
                     case 'create-drink-prep':
                         renderDrinkPrepOutput();
                         break;
-                        break;
                     case 'search-foods':
                         openSearchDatabaseModal('foods');
                         break;
@@ -548,12 +552,26 @@ async function submitAddMealPrep() {
 
 function openCreateFromSearch() {
     const type = databaseSearchState.type || 'foods';
-    if (type === 'foods') {
-        openCreateFoodModal();
-    } else if (type === 'meals') {
-        openCreateMealPrepModal();
-    } else {
-        renderDrinkPrepOutput();
+
+    const searchModalEl = document.getElementById('modalSearchDatabase');
+
+    if (searchModalEl) {
+        const modal = bootstrap.Modal.getInstance(searchModalEl);
+
+        searchModalEl.addEventListener('hidden.bs.modal', function handler() {
+
+            searchModalEl.removeEventListener('hidden.bs.modal', handler);
+
+            if (type === 'foods') {
+                openCreateFoodModal();
+            } else if (type === 'meals') {
+                openCreateMealPrepModal();
+            } else {
+                renderDrinkPrepOutput();
+            }
+        });
+
+        modal.hide();
     }
 }
 
@@ -594,7 +612,7 @@ async function renderDashboardOutput() {
                             <div class="mt-3">
                                 <canvas id="dashboardIntakeChart" width="350" height="240"></canvas>
                             </div>
-                            <p class="mt-3"><strong>(W.I.P)</strong></p>
+                            <p class="mt-3"><strong><i>(W.I.P)</i></strong></p>
                         </div>
                     </div>
                 </div>
@@ -603,16 +621,15 @@ async function renderDashboardOutput() {
                         <div class="card-body">
                             <h5 class="card-title">Consumed Meals</h5>
                             <div class="mb-3">
-                                <label class="form-label" for="dashboardMealSelect">Choose a meal from the database</label>
-                                <select id="dashboardMealSelect" class="form-select">
-                                    <option value="">Select meal</option>
-                                </select>
+                                <p class="form-label">Choose a meal from the database</p>
                             </div>
                             <button class="btn btn-primary btn-sm mb-3" type="button" onclick="addConsumedMeal()">Add consumed meal</button>
+                            <button class="btn btn-danger btn-sm mb-3" type="button" onclick="toggleConsumedMealDeleteMode()">Remove consumed meal</button>
                             <div id="dashboardConsumedMealsList" class="mb-2">
                                 <div class="text-muted">Loading today's consumed meals...</div>
                             </div>
                             <p class="mt-3 text-muted small">Add meals created in the database directly to today's intake.</p>
+                            <p class="mt-3 text-muted small"><strong><i>(W.I.P.)</i></strong></p>
                         </div>
                     </div>
                 </div>
@@ -626,24 +643,13 @@ async function renderDashboardOutput() {
                                 <span class="placeholder col-8"></span>
                                 <span class="placeholder col-4"></span>
                             </div>
-                            <p class="mt-3"><strong>(W.I.P)</strong></p>
+                            <p class="mt-3"><strong><i>(Future feature)</i></strong></p>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
     `;
-
-    const mealSelect = document.getElementById('dashboardMealSelect');
-    if (mealSelect) {
-        mealSelect.innerHTML = '<option value="">Select meal</option>';
-        meals.forEach(meal => {
-            const option = document.createElement('option');
-            option.value = meal.id;
-            option.textContent = meal.name;
-            mealSelect.appendChild(option);
-        });
-    }
 
     await loadDashboardIntakeSummary();
     await loadDashboardConsumedMeals();
@@ -670,13 +676,48 @@ async function loadDashboardConsumedMeals() {
         entries.forEach(entry => {
             const mealName = entry.meal_id ? (meals.find(m => m.id === entry.meal_id)?.name || `Meal ${entry.meal_id}`) : 'Custom entry';
             const entryItem = document.createElement('div');
-            entryItem.className = 'mb-3 p-2 border rounded';
+            entryItem.className = 'mb-3 p-2 border rounded d-flex justify-content-between align-items-start flex-wrap gap-2';
             entryItem.innerHTML = `
                 <div class="fw-semibold">${escapeHtml(mealName)}</div>
                 <div class="small text-muted mb-1">${escapeHtml(entry.description || 'Meal consumed')}</div>
                 <div>Protein ${escapeHtml(String(entry.protein))} g · Carbs ${escapeHtml(String(entry.carbs))} g · Fat ${escapeHtml(String(entry.fat))} g · ${escapeHtml(String(entry.calories))} kcal</div>
             `;
-            container.appendChild(entryItem);
+        if (consumedMealsDeleteMode) {
+
+            const deleteButton = document.createElement('button');
+            deleteButton.type = 'button';
+            deleteButton.className = 'btn-danger';
+            deleteButton.textContent = 'Delete';
+            deleteButton.addEventListener('click', async () => {
+
+                try {
+
+                    const response = await fetch(`${API_URL}/intake/${entry.id}`, {
+                        method: 'DELETE'
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}`);
+                    }
+
+                    // reload list after delete
+                    loadDashboardConsumedMeals();
+
+                    // OPTIONAL: refresh summary too
+                    loadDashboardIntakeSummary();
+
+                } catch (error) {
+
+                    console.error('Unable to delete consumed meal', error);
+
+                    alert(`Unable to delete entry: ${error.message}`);
+                }
+            });
+
+            entryItem.appendChild(deleteButton);
+        }
+
+        container.appendChild(entryItem);
         });
     } catch (error) {
         container.innerHTML = `<div class="text-danger">Unable to load consumed meals: ${escapeHtml(error.message || String(error))}</div>`;
@@ -684,31 +725,24 @@ async function loadDashboardConsumedMeals() {
 }
 
 async function addConsumedMeal() {
-    const mealSelect = document.getElementById('dashboardMealSelect');
-    if (!mealSelect) return;
-    const mealId = mealSelect.value;
-    if (!mealId) {
-        alert('Please select a meal to add to today\'s intake.');
-        return;
+    openSearchDatabaseModal('meals');
+}
+
+function toggleConsumedMealDeleteMode() {
+
+    consumedMealsDeleteMode = !consumedMealsDeleteMode;
+
+    const btn = document.querySelector('[onclick="toggleConsumedMealDeleteMode()"]');
+
+    if (btn) {
+        btn.textContent = consumedMealsDeleteMode
+            ? 'Exit delete mode'
+            : 'Remove a consumed meal';
     }
 
-    try {
-        const response = await fetch(`${API_URL}/intake/`, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({meal_id: Number(mealId)})
-        });
-        if (!response.ok) {
-            const errorText = await response.text().catch(() => response.statusText);
-            throw new Error(`HTTP ${response.status} ${errorText}`);
-        }
-        await loadDashboardIntakeSummary();
-        await loadDashboardConsumedMeals();
-        alert('Consumed meal added to today\'s intake.');
-    } catch (error) {
-        alert(`Unable to add consumed meal: ${error.message || String(error)}`);
-    }
+    loadDashboardConsumedMeals();
 }
+
 
 async function renderStatusOutput() {
     const output = document.getElementById('appOutputSection');
@@ -779,45 +813,20 @@ async function loadDashboardIntakeSummary() {
         <div>Carbs: ${carbs.toFixed(1)} g</div>
         <div>Fat: ${fat.toFixed(1)} g</div>
         <div class="mt-2"><small>Entries: ${data.entries ?? 0}</small></div>
-        <button class="btn btn-sm btn-outline-primary mt-3" type="button" onclick="renderTodaysIntake()">View intake details</button>
+
+        <div id="todays-intake-container" class="mt-3"></div>
     `;
 
-    if (window.Chart) {
-        try {
-            const ctx = chartCanvas.getContext('2d');
-            if (window.dashboardIntakeChart) {
-                window.dashboardIntakeChart.data.datasets[0].data = [protein * 4, carbs * 4, fat * 9];
-                window.dashboardIntakeChart.update();
-            } else {
-                window.dashboardIntakeChart = new Chart(ctx, {
-                    type: 'pie',
-                    data: {
-                        labels: ['Protein', 'Carbs', 'Fat'],
-                        datasets: [{
-                            data: [protein * 4, carbs * 4, fat * 9],
-                            backgroundColor: ['#4e73df', '#1cc88a', '#f6c23e'],
-                        }]
-                    },
-                    options: {
-                        plugins: {
-                            tooltip: {
-                                callbacks: {
-                                    label: function(context) {
-                                        const value = context.raw || 0;
-                                        const totalP = (context.dataset.data.reduce((acc, n) => acc + n, 0) || 1);
-                                        const percent = ((value / totalP) * 100).toFixed(1);
-                                        return `${context.label}: ${value.toFixed(0)} kcal (${percent}%)`;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                });
-            }
-        } catch (err) {
-            console.warn('Unable to render dashboard intake chart', err);
-        }
-    }
+    const chartData = {
+        protein,
+        carbs,
+        fat
+    };
+
+    // pass data into intake module
+    requestAnimationFrame(() => {
+        renderTodaysIntake(chartData);
+    });
 }
 
 function setDatabaseSearchType(type) {
@@ -2527,88 +2536,153 @@ function applyStoredTheme() {
 }
 
 // Today's Intake: simple client-side intake that accepts macronutrient inputs per entry
-function renderTodaysIntake() {
+function renderTodaysIntake(serverData = null) {
     applyStoredTheme();
-    const out = document.getElementById('appOutputSection');
+
+    const out = document.getElementById('todays-intake-container');
+    if (!out) return;
+
     out.innerHTML = `
-        <h2>Today's Intake</h2>
-        <div class="card mb-3"><div class="card-body">
-            <div id="intake-controls" class="mb-3">
-                <button class="btn btn-primary" id="addIntakeRow">Add Entry</button>
+        <hr>
+            <div class="chart-wrapper">
+                <canvas id="intakeChart"></canvas>
             </div>
-            <div id="intake-rows"></div>
-            <h4 class="mt-3">Totals</h4>
-            <div id="intake-totals" class="mb-3"></div>
-            <canvas id="intakeChart" width="300" height="200"></canvas>
-            <p class="text-muted mt-2">(W.I.P.)</p>
-        </div></div>
+
+        <h5 class="mt-3">Manual Intake input</h5>
+
+        <div class="card mb-3">
+            <div class="card-body">
+
+                <div id="intake-controls" class="mb-3">
+                    <button class="btn btn-primary" id="addIntakeRow">
+                        Add Entry
+                    </button>
+                </div>
+
+                <div id="intake-rows"></div>
+
+                <p class="text-muted mt-2"><strong><i>(W.I.P.)</i></strong> This is a simple manual intake tracker for now (will be <i>deleted</i> at some point). <strong>Planned:</strong> save history, load history, and eventually a weekly / monthly graph report.</p>
+
+            </div>
+        </div>
     `;
 
     const rows = document.getElementById('intake-rows');
-    const totalsEl = document.getElementById('intake-totals');
-
     const chartCanvas = document.getElementById('intakeChart');
+
     let intakeChart = null;
+
+    // initial chart values (from backend OR empty)
+    const base = serverData || { protein: 0, carbs: 0, fat: 0 };
+    const initialData = serverData
+        ? [
+            (serverData.protein || 0) * 4,
+            (serverData.carbs || 0) * 4,
+            (serverData.fat || 0) * 9
+        ]
+        : [0, 0, 0];
 
     function recalcAndRender() {
         const entries = Array.from(rows.querySelectorAll('.intake-row'));
-        let prot = 0, carbs = 0, fat = 0;
+
+        let protein = 0, carbs = 0, fat = 0;
+
         entries.forEach(r => {
-            const p = parseFloat(r.querySelector('.iprot').value) || 0;
-            const c = parseFloat(r.querySelector('.icarb').value) || 0;
-            const f = parseFloat(r.querySelector('.ifat').value) || 0;
-            prot += p; carbs += c; fat += f;
+            const p = parseFloat(r.querySelector('.iprot')?.value) || 0;
+            const c = parseFloat(r.querySelector('.icarb')?.value) || 0;
+            const f = parseFloat(r.querySelector('.ifat')?.value) || 0;
+
+            protein += p;
+            carbs += c;
+            fat += f;
         });
-        const kcal = prot*4 + carbs*4 + fat*9;
-        totalsEl.innerHTML = `<div>Protein: ${prot.toFixed(1)} g — Carbs: ${carbs.toFixed(1)} g — Fat: ${fat.toFixed(1)} g — <strong>Total kcal: ${kcal.toFixed(0)}</strong></div>`;
 
-        const data = [prot*4, carbs*4, fat*9];
-        const labels = ['Protein', 'Carbs', 'Fat'];
+        // 🔥 COMBINE base (API) + manual input
+        const totalData = [
+            (base.protein + protein) * 4,
+            (base.carbs + carbs) * 4,
+            (base.fat + fat) * 9
+        ];
 
+        const data = [protein * 4, carbs * 4, fat * 9];
+
+        // update chart if exists
         if (intakeChart) {
-            intakeChart.data.datasets[0].data = data;
+            intakeChart.data.datasets[0].data = totalData;
             intakeChart.update();
-        } else if (window.Chart) {
-            intakeChart = new Chart(chartCanvas.getContext('2d'), {
-                type: 'pie',
-                data: {
-                    labels,
-                    datasets: [{ data, backgroundColor: ['#4e73df','#1cc88a','#f6c23e'] }]
-                },
-                options: {
-                    plugins: {
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    const value = context.raw || 0;
-                                    const total = context.dataset.data.reduce((a,b)=>a+b,0) || 1;
-                                    const pct = ((value/total)*100).toFixed(1);
-                                    return `${context.label}: ${value.toFixed(0)} kcal (${pct}%)`;
-                                }
+        }
+    }
+
+    // CREATE CHART (once)
+    requestAnimationFrame(() => {
+        if (!window.Chart || !chartCanvas) return;
+
+        const ctx = chartCanvas.getContext('2d');
+        if (!ctx) return;
+
+        intakeChart = new Chart(ctx, {
+            type: 'pie',
+            data: {
+                labels: ['Protein', 'Carbs', 'Fat'],
+                datasets: [{
+                    data: initialData,
+                    backgroundColor: ['#4e73df', '#1cc88a', '#f6c23e']
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function (context) {
+                                const value = context.raw || 0;
+                                const dataset = context.dataset.data;
+
+                                const total = dataset.reduce((a, b) => a + b, 0) || 1;
+                                const pct = ((value / total) * 100).toFixed(1);
+
+                                const macros = ['Protein', 'Carbs', 'Fat'];
+
+                                return `${macros[context.dataIndex]}: ${value.toFixed(0)} kcal (${pct}%)`;
                             }
                         }
                     }
                 }
-            });
-        }
-    }
+            }
+        });
+    });
 
+    // ADD ROW
     document.getElementById('addIntakeRow').addEventListener('click', () => {
         const row = document.createElement('div');
-        row.className = 'intake-row d-flex gap-2 align-items-center mb-2';
+
+        row.className = 'intake-row d-flex flex-wrap gap-2 align-items-center mb-2';
+
         row.innerHTML = `
-            <input class="form-control iprot" placeholder="Protein (g)" style="width:110px">
-            <input class="form-control icarb" placeholder="Carbs (g)" style="width:110px">
-            <input class="form-control ifat" placeholder="Fat (g)" style="width:110px">
-            <button class="btn btn-danger btn-sm remove-row">Remove</button>
+            <input class="form-control iprot flex-grow-1" placeholder="Protein (g)">
+            <input class="form-control icarb flex-grow-1" placeholder="Carbs (g)">
+            <input class="form-control ifat flex-grow-1" placeholder="Fat (g)">
+            <button class="btn btn-danger btn-sm remove-row">
+                Remove
+            </button>
         `;
+
         rows.appendChild(row);
-        row.querySelectorAll('input').forEach(i => i.addEventListener('input', recalcAndRender));
-        row.querySelector('.remove-row').addEventListener('click', () => { row.remove(); recalcAndRender(); });
+
+        row.querySelectorAll('input')
+            .forEach(i => i.addEventListener('input', recalcAndRender));
+
+        row.querySelector('.remove-row')
+            .addEventListener('click', () => {
+                row.remove();
+                recalcAndRender();
+            });
+
         recalcAndRender();
     });
 
-    // add an initial row
+    // initial row
     document.getElementById('addIntakeRow').click();
 }
 
@@ -2622,7 +2696,7 @@ function renderDrinkPrepOutput() {
             <div class="mb-2 d-flex gap-2 align-items-center">
                 <input id="drinkName" class="form-control" placeholder="Drink name" style="max-width:240px">
                 <button id="addIngredientBtn" class="btn btn-outline-primary">Add Ingredient</button>
-                <input id="drinkQuantity" type="number" class="form-control" placeholder="Quantity" style="max-width:120px" value="1">
+                <input id="drinkQuantity" type="number" class="form-control" placeholder="Quantity" style="max-width:120px">
             </div>
             <div id="drinkIngredients"></div>
             <div class="mt-3"><button id="calcDrinkBtn" class="btn btn-success">Calculate Required Ingredients</button></div>
@@ -2638,10 +2712,10 @@ function renderDrinkPrepOutput() {
         row.className = 'd-flex gap-2 align-items-center mb-2';
         const select = document.createElement('select');
         select.className = 'form-select ing-food';
-        select.style.maxWidth = '320px';
+        select.style.maxWidth = '240px';
         const emptyOpt = document.createElement('option'); emptyOpt.value=''; emptyOpt.text='Select food ingredient'; select.appendChild(emptyOpt);
         foods.forEach(f => { const o = document.createElement('option'); o.value = f.id; o.text = `${f.name} ${f.brand?('('+f.brand+')'):''}`; select.appendChild(o); });
-        const amount = document.createElement('input'); amount.type='number'; amount.className='form-control ing-amt'; amount.placeholder='Amount per drink'; amount.style.maxWidth='140px';
+        const amount = document.createElement('input'); amount.type='number'; amount.className='form-control ing-amt'; amount.placeholder='Amount per drink'; amount.style.maxWidth='180px';
         const unit = document.createElement('input'); unit.className='form-control ing-unit'; unit.placeholder='unit (ml/g)'; unit.style.maxWidth='100px';
         const rem = document.createElement('button'); rem.className='btn btn-danger btn-sm'; rem.textContent='Remove';
         row.appendChild(select); row.appendChild(amount); row.appendChild(unit); row.appendChild(rem);

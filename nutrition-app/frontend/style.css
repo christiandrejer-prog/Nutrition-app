@@ -151,6 +151,21 @@ button:not(.btn):hover {
     font-weight: 600;
     color: #212529;
 }
+/* Charts */
+.intakeChart {
+    position: relative;
+    width: 100%;
+    max-width: 300px;
+    margin: 20px auto;
+}
+
+.chart-wrapper {
+    position: relative;
+    height: 250px;   /* or 220px */
+    width: 100%;
+}
+
+
 
 /* Make sidebar icons and labels consistent size */
 .sidebar .nav-link, .sidebar .nav-link .bi {
@@ -219,7 +234,6 @@ li {
 
 .status-row {
     display: flex;
-    justify-content: space-between;
     gap: 1rem;
     flex-wrap: wrap;
 }
