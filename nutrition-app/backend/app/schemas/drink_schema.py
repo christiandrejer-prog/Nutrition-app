@@ -1,5 +1,6 @@
 from typing import List, Optional
 from pydantic import BaseModel, Field
+from app.schemas.food_schema import FoodResponse
 
 
 class DrinkCreate(BaseModel):
@@ -27,6 +28,8 @@ class DrinkIngredientResponse(BaseModel):
     amount: float
     unit: str
 
+    food: Optional[FoodResponse]
+
     class Config:
         from_attributes = True
 
@@ -35,30 +38,34 @@ class DrinkDetailResponse(DrinkResponse):
     ingredients: List[DrinkIngredientResponse]
 
 
-class DrinkPrepCreate(BaseModel):
-    drink_id: int
-    quantity: int = Field(..., gt=0)
+class DrinkListCreate(BaseModel):
+    name: str
 
 
-class DrinkPrepItemResponse(BaseModel):
+class DrinkListItemResponse(BaseModel):
     id: int
-    prep_id: int
-    food_id: int
-    required_amount: float
-    unit: str
+    list_id: int
+    drink_id: int
+    quantity: float
+
+    drink: DrinkDetailResponse
 
     class Config:
         from_attributes = True
 
 
-class DrinkPrepResponse(BaseModel):
+class DrinkListResponse(BaseModel):
     id: int
-    drink_id: int
-    quantity: int
+    name: str
 
     class Config:
         from_attributes = True
 
 
-class DrinkPrepDetailResponse(DrinkPrepResponse):
-    ingredients: List[DrinkPrepItemResponse]
+class DrinkListDetailResponse(DrinkListResponse):
+    items: List[DrinkListItemResponse]
+
+
+class DrinkListItemCreate(BaseModel):
+    drink_id: int
+    quantity: float = Field(..., gt=0)

@@ -19,8 +19,8 @@ from app.models import (
     user_meal,
     drink,
     drink_ingredient,
-    drink_prep,
-    drink_prep_item,
+    drink_list,
+    drink_list_item,
     garnish,
     intake_entry,
 )

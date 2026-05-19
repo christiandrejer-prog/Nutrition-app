@@ -9,6 +9,10 @@ class MealCreate(BaseModel):
 class MealUpdate(BaseModel):
     name: str
 
+class MealListResponse(BaseModel):
+    id: int
+    name: str
+    item_count: int
 
 class MealItemCreate(BaseModel):
     food_id: int

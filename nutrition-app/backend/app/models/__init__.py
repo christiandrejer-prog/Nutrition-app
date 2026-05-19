@@ -7,8 +7,8 @@ from .user import User
 from .user_meal import UserMeal
 from .drink import Drink
 from .drink_ingredient import DrinkIngredient
-from .drink_prep import DrinkPrep
-from .drink_prep_item import DrinkPrepItem
+from .drink_list import DrinkList
+from .drink_list_item import DrinkListItem
 from .garnish import Garnish
 from .intake_entry import IntakeEntry
 
@@ -22,8 +22,8 @@ __all__ = [
     "UserMeal",
     "Drink",
     "DrinkIngredient",
-    "DrinkPrep",
-    "DrinkPrepItem",
+    "DrinkList",
+    "DrinkListItem",
     "Garnish",
     "IntakeEntry",
 ]

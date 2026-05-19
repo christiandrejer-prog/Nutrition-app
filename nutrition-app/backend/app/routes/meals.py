@@ -33,7 +33,7 @@ def create_meal(data: MealCreate, db: Session = Depends(get_db)):
 
     return meal
 
-
+# Update meal name
 @router.put("/{meal_id}")
 def update_meal(meal_id: int, data: MealUpdate, db: Session = Depends(get_db)):
     meal = db.query(Meal).filter(Meal.id == meal_id).first()
@@ -53,7 +53,7 @@ def update_meal(meal_id: int, data: MealUpdate, db: Session = Depends(get_db)):
 
     return meal
 
-
+# Delete a meal and its items
 @router.delete("/{meal_id}")
 def delete_meal(meal_id: int, db: Session = Depends(get_db)):
     meal = db.query(Meal).filter(Meal.id == meal_id).first()
@@ -64,14 +64,28 @@ def delete_meal(meal_id: int, db: Session = Depends(get_db)):
     db.delete(meal)
     db.commit()
 
-    return {"detail": "Meal deleted"}
+    return {"detail": f"Meal deleted {meal_id}"}
 
 
 # Get all meals
 @router.get("/")
 def get_meals(db: Session = Depends(get_db)):
-    return db.query(Meal).all()
 
+    results = db.query(
+        Meal.id,
+        Meal.name,
+        func.count(MealItem.id).label("item_count")
+    ).outerjoin(MealItem, MealItem.meal_id == Meal.id
+    ).group_by(Meal.id).all()
+
+    return [
+        {
+            "id": r.id,
+            "name": r.name,
+            "item_count": r.item_count
+        }
+        for r in results
+    ]
 
 
 # Add food items to meal
@@ -111,7 +125,6 @@ def add_items(meal_id: int, data: MealAddFood, db: Session = Depends(get_db)):
     return {"message": "Items added to meal"}
 
 
-
 # Get meal details
 @router.get("/{meal_id}")
 def get_meal(meal_id: int, db: Session = Depends(get_db)):
@@ -127,7 +140,6 @@ def get_meal(meal_id: int, db: Session = Depends(get_db)):
         "meal": meal.name,
         "items": items
     }
-
 
 
 # Get meal macros
@@ -344,4 +356,4 @@ def delete_meal_item(meal_id: int, item_id: int, db: Session = Depends(get_db)):
     db.delete(item)
     db.commit()
 
-    return {"detail": "Meal item deleted"}
+    return {"detail": f"Meal item deleted {item.id} from meal {meal_id}"}

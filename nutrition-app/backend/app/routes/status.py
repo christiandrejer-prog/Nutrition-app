@@ -12,7 +12,7 @@ from app.models.meal import Meal
 from app.models.user import User
 from app.models.drink import Drink
 from app.models.drink_ingredient import DrinkIngredient
-from app.models.drink_prep import DrinkPrep
+from app.models.drink_list import DrinkList
 from app.models.garnish import Garnish
 from app.models.intake_entry import IntakeEntry
 
@@ -47,7 +47,7 @@ def get_status(db: Session = Depends(get_db)):
             "users": db.query(User).count(),
             "drinks": db.query(Drink).count(),
             "drink_ingredients": db.query(DrinkIngredient).count(),
-            "drink_preps": db.query(DrinkPrep).count(),
+            "drink_lists": db.query(DrinkList).count(),
             "garnishes": db.query(Garnish).count(),
             "intake_entries": db.query(IntakeEntry).count(),
         }
@@ -65,9 +65,9 @@ def get_status(db: Session = Depends(get_db)):
         "user_meals": {"url": "/user_meals/", "available": any(name == "user_meals" for name in status["database"]["tables"])},
         "drinks": {"url": "/drinks/", "available": any(name == "drinks" for name in status["database"]["tables"])},
         "drink_ingredients": {"url": "/drink_ingredients/", "available": any(name == "drink_ingredients" for name in status["database"]["tables"])},
-        "drink_prep_items": {"url": "/drink_prep_items/", "available": any(name == "drink_prep_items" for name in status["database"]["tables"])},
+        "drink_list_items": {"url": "/drink_list_items/", "available": any(name == "drink_list_items" for name in status["database"]["tables"])},
         "garnishes": {"url": "/garnishes/", "available": any(name == "garnishes" for name in status["database"]["tables"])},
-        "drink_preps": {"url": "/drink_preps/", "available": any(name == "drink_preps" for name in status["database"]["tables"])},
+        "drink_lists": {"url": "/drink_lists/", "available": any(name == "drink_lists" for name in status["database"]["tables"])},
         "garnishes": {"url": "/garnishes/", "available": any(name == "garnishes" for name in status["database"]["tables"])},
         "intake": {"url": "/intake/", "available": any(name == "intake_entries" for name in status["database"]["tables"])},
         "nutrition": {"url": "/nutrition/", "available": any(name == "foods" for name in status["database"]["tables"]) and any(name == "nutrients" for name in status["database"]["tables"])},
