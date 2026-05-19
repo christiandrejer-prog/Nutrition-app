@@ -359,16 +359,16 @@ body.dark-mode .btn-warning {
     background-color: #1b2430 !important;
     color: #e6e6e6 !important;
 }
-.dark-mode section, .dark-mode .card { 
+.dark-mode section, .dark-mode .card, .dark-mode li { 
     background-color: #1b2430 !important; 
     border-color: #232f3a !important; 
 }
-.dark-mode input, .dark-mode .form-control:focus, .dark-mode .form-control, .dark-mode select, .dark-mode .modal-content, .dark-mode .modal-header, .dark-mode .modal-body, .dark-mode .modal-footer { 
+.dark-mode input, .dark-mode .form-control:focus, .dark-mode .form-control, .dark-mode select, .dark-mode .modal-content, .dark-mode .modal-header, .dark-mode .modal-body, .dark-mode .modal-footer, .dark-mode .dropdown-item:hover { 
     background-color: #131a22 !important; 
     color: #e6e6e6 !important; 
     border-color: #2a3742 !important;
 }
-.dark-mode title, .dark-mode .mb-3, .dark-mode .small, .dark-mode .app-title, .dark-mode h2, .dark-mode .card-text, .dark-mode .card-title, .dark-mode p, .dark-mode .mb-3, .dark-mode h4 { 
+.dark-mode title, .dark-mode .mb-3, .dark-mode .small, .dark-mode .app-title, .dark-mode h2, .dark-mode .card-text, .dark-mode .card-title, .dark-mode p, .dark-mode .mb-3, .dark-mode h4, .dark-mode .dropdown-item { 
     color: #e6e6e6 !important; 
 }
 

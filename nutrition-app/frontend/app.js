@@ -143,6 +143,7 @@ async function initApp() {
     loadStoredApiUrl();
     await loadRuntimeConfig();
     updateApiUrlInput();
+    renderHomeOutput()
     loadNutrients();
     loadFoods();
     loadMeals();
@@ -460,7 +461,7 @@ function registerSidebarHandlers() {
                     case 'home':
                         renderHomeOutput();
                         break;
-                    case 'dashboard':
+                    case 'meal-dashboard':
                         renderMealDashboardOutput();
                         break;
                     case 'drink-dashboard':
@@ -631,25 +632,72 @@ function showModalById(modalId) {
     instance.show();
 }
 
+function updateCount() {
+    const input = document.getElementById("feedbackInput");
+    const count = document.getElementById("count");
+    count.innerText = `${input.value.length} / 200`;
+}
+
 function renderHomeOutput() {
     const output = document.getElementById('appOutputSection');
     if (!output) return;
     output.innerHTML = `
-        <div class="alert alert-info">
-            <h3 class="h5 mb-2">Home</h3>
-            <p>This area is still a work in progress. Displaying home output placeholder.</p>
-            <p><strong>(W.I.P)</strong></p>
+        <div class="mb-4">
+            <h3 class="mb-3">Home</h3>
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <p>Welcome to the Nutrition App!</p>
+                        <p>Use the sidebar to navigate through different sections of the app.</p>
+                    </div>
+                </div>
+            </div>
+
+
+            <p>This area is still a work in progress. Just as the rest of the app.</p>
+            <p>Soon to work on:
+                <ul>
+                    <li> - Make add/remove consumed meals possible throgh prompts <strong><i>(W.I.P)</i></strong></li>
+                    <li> - Quick add/remove consumed meals</li>
+                    <li> - Quick add/remove drinks to list</li>
+                    <li> - Implement View buttons in search modal</li>
+                    <li> - Create the add ingredients to drink modal</li>
+                    <li> - Create the add food to meal modal</li>
+                    <li> - Update the modal for food details</li>
+                    <li> - Create the edit button when viewing a food/meal/drink/drink-list</li>
+                    <li> - Implement the edit buttons</li>
+                    <li> - Update database to have more data</li>
+                    <li> - Add personalized user profiles</li>
+                    <li> - Make settings options and buttons plus a way to save them</li>
+                </ul>
+            </p>
+        </div>
+        <div class="card mb-3">
+            <textarea class="form-control"
+                    id="feedbackInput"
+                    maxlength="200"
+                    rows="3"
+                    placeholder="Have feedback or want to contribute?"
+                    onfocus="this.placeholder='Type your feedback and press Enter...';"
+                    onblur="this.placeholder='Have feedback or want to contribute...';"
+                    onkeydown="if(event.key === 'Enter') submitFeedback();"
+                    oninput="updateCount()">
+            </textarea>
+
+            <small id="count">0 / 200</small>
         </div>
     `;
+
     output.scrollIntoView({behavior: 'smooth'});
 }
+
+
 
 async function renderMealDashboardOutput() {
     const output = document.getElementById('appOutputSection');
     if (!output) return;
     output.innerHTML = `
         <div class="mb-4">
-            <h3 class="mb-3">Dashboard</h3>
+            <h3 class="mb-3">Meal Dashboard</h3>
             <div class="row g-3">
                 <div class="col-12 col-md-4">
                     <div class="card h-100 shadow-sm">
@@ -3833,3 +3881,30 @@ function renderDrinkPrepOutput() {
     // add an initial ingredient row
     addIngredientRow();
 }
+
+
+
+
+async function submitFeedback() {
+    const input = document.getElementById("feedbackInput");
+    const message = input.value;
+
+    if (!message.trim()) return;
+
+    await fetch(`${API_URL}/feedback`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            message: message
+        })
+    });
+
+    console.log("Feedback sent:", message);
+
+    input.value = "";
+    alert("Thank you for your feedback!");
+    updateCount(); // resets counter to 0
+}
+

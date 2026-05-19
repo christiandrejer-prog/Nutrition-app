@@ -62,3 +62,13 @@ def on_startup():
 @app.get("/")
 def home():
     return {"message": "Nutrition API running"}
+
+from datetime import datetime
+from app.schemas.feedback_schema import Feedback
+
+@app.post("/feedback")
+async def submit_feedback(feedback: Feedback):
+
+    print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] FEEDBACK: {feedback.message}")
+
+    return {"ok": True}
