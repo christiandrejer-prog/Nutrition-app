@@ -368,7 +368,7 @@ body.dark-mode .btn-warning {
     color: #e6e6e6 !important; 
     border-color: #2a3742 !important;
 }
-.dark-mode title, .dark-mode .mb-3, .dark-mode .app-title, .dark-mode h2, .dark-mode .card-text, .dark-mode .card-title, .dark-mode p, .dark-mode .mb-3, .dark-mode h4 { 
+.dark-mode title, .dark-mode .mb-3, .dark-mode .small, .dark-mode .app-title, .dark-mode h2, .dark-mode .card-text, .dark-mode .card-title, .dark-mode p, .dark-mode .mb-3, .dark-mode h4 { 
     color: #e6e6e6 !important; 
 }
 
@@ -379,4 +379,84 @@ body.dark-mode .btn-warning {
 }
 .dark-mode .offcanvas .nav-link {
     color: #e6e6e6 !important;
+}
+
+
+/* Drink list styles */
+.drink-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.drink-item {
+    position: relative;
+
+    padding: 10px 14px;
+
+    border: 1px solid #2d2d2d;
+
+    border-radius: 12px;
+
+    background: #111;
+
+    color: #fff;
+
+    cursor: pointer;
+
+    transition: 0.15s ease;
+
+    min-width: 120px;
+}
+
+.drink-item:hover {
+    transform: translateY(-2px);
+
+    border-color: #555;
+}
+
+.drink-name {
+    font-size: 14px;
+    font-weight: 500;
+}
+
+/* Hover box for drink details */
+.drink-hover-box {
+    position: fixed;
+
+    z-index: 9999;
+
+    width: 240px;
+
+    padding: 14px;
+
+    border-radius: 12px;
+
+    background: #1b1b1b;
+
+    border: 1px solid #333;
+
+    color: white;
+
+    box-shadow:
+        0 10px 30px rgba(0,0,0,0.35);
+
+    pointer-events: none;
+}
+
+.drink-delete {
+    position: absolute;
+
+    top: 4px;
+    right: 6px;
+
+    border: none;
+
+    background: transparent;
+
+    color: #ff6666;
+
+    font-size: 18px;
+
+    cursor: pointer;
 }

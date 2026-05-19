@@ -30,6 +30,12 @@
                                     Dashboard
                                 </a>
                             </li>
+                            <li class="nav-item mb-2">
+                                <a class="nav-link" href="#drink-dashboard" data-action="drink-dashboard">
+                                    <i class="bi bi-cup-straw me-2"></i>
+                                    Drinks Dashboard
+                                </a>
+                            </li>
                             <li class="nav-item">
                                 <a class="nav-link" href="#" id="create-meal-prep-btn" data-action="create-meal-prep">
                                     <i class="bi bi-plus-lg me-2"></i>
@@ -98,8 +104,13 @@
                                 <li class="nav-item mb-2"><a class="nav-link" href="#home" data-action="home"><i class="bi bi-house-door-fill me-2"></i>Home</a></li>
                                 <li class="nav-item mb-2"><a class="nav-link" href="#dashboard" data-action="dashboard"><i class="bi bi-speedometer2 me-2"></i>Dashboard</a></li>
                                 <li class="nav-item mb-2"><a class="nav-link" href="#" data-action="create-meal-prep"><i class="bi bi-plus-lg me-2"></i>Create Meal Prep</a></li>
+                                <li class="nav-item mb-2"><a class="nav-link" href="#" data-action="create-food"><i class="bi bi-plus-lg me-2"></i>Create Food</a></li>
+                                <li class="nav-item mb-2"><a class="nav-link" href="#" data-action="create-nutrient"><i class="bi bi-plus-lg me-2"></i>Create Nutrient</a></li>
+                                <li class="nav-item mb-2"><a class="nav-link" href="#" data-action="create-drink"><i class="bi bi-plus-lg me-2"></i>Create Drink</a></li>
+                                <li class="nav-item mb-2"><a class="nav-link" href="#" data-action="create-drink-list"><i class="bi bi-plus-lg me-2"></i>Create Drink List</a></li>
                                 <li class="nav-item mb-2"><a class="nav-link" href="#" data-action="search-foods"><i class="bi bi-search me-2"></i>Search Foods</a></li>
                                 <li class="nav-item mb-2"><a class="nav-link" href="#" data-action="search-meals"><i class="bi bi-search me-2"></i>Search Meals</a></li>
+                                <li class="nav-item mb-2"><a class="nav-link" href="#" data-action="search-drinks"><i class="bi bi-search me-2"></i>Search Drinks</a></li>
                                 <li class="nav-item mb-2"><button class="btn btn-outline-info w-100 text-start" type="button" data-action="status"><i class="bi bi-info-circle me-2"></i>System Status</button></li>
                                 <li class="nav-item border-top mt-3 pt-3"><a class="nav-link" href="#" data-action="account"><i class="bi bi-person-circle me-2"></i>Account(W.I.P)</a></li>
                                 <li class="nav-item"><a class="nav-link" href="#" data-action="settings"><i class="bi bi-gear me-2"></i>Settings(W.I.P)</a></li>
@@ -119,7 +130,7 @@
                     <div id="appOutputSection" class="mb-4"></div>
 
                     <!-- Add modals -->
-                    <div class="modal fade" id="modalAddNutrient" tabindex="-1" aria-hidden="true">
+                    <div class="modal fade" id="modalCreateNutrient" tabindex="-1" aria-hidden="true">
                         <div class="modal-dialog">
                             <div class="modal-content">
                                 <div class="modal-header">
@@ -144,7 +155,7 @@
                         </div>
                     </div>
 
-                    <div class="modal fade" id="modalAddFood" tabindex="-1" aria-hidden="true">
+                    <div class="modal fade" id="modalCreateFood" tabindex="-1" aria-hidden="true">
                         <div class="modal-dialog">
                             <div class="modal-content">
                                 <div class="modal-header">
@@ -194,6 +205,48 @@
                         </div>
                     </div>
 
+                    <div class="modal fade" id="modalCreateDrink" tabindex="-1" aria-hidden="true">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title">Create Drink</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <div class="mb-3">
+                                        <label class="form-label">Drink name</label>
+                                        <input id="modalDrinkName" class="form-control" placeholder="Drink name (e.g., Amaretto sour)">
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                    <button type="button" class="btn btn-primary" onclick="submitAddDrink()">Create</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="modal fade" id="modalCreateDrinkList" tabindex="-1" aria-hidden="true">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title">Create Drink List</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <div class="mb-3">
+                                        <label class="form-label">Drink list name</label>
+                                        <input id="modalDrinkListName" class="form-control" placeholder="Drink list name (e.g., Weekend Cocktails)">
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                    <button type="button" class="btn btn-primary" onclick="submitAddDrinkList()">Create</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="modal fade" id="modalSearchDatabase" tabindex="-1" aria-hidden="true">
                         <div class="modal-dialog modal-lg">
                             <div class="modal-content">
@@ -212,6 +265,9 @@
                                         </button>
                                         <button type="button" class="btn btn-outline-secondary" data-search-type="drinks" onclick="setDatabaseSearchType('drinks')">
                                             <i class="bi bi-cup-straw me-1"></i> Drinks
+                                        </button>
+                                        <button type="button" class="btn btn-outline-secondary" data-search-type="drink lists" onclick="setDatabaseSearchType('drink lists')">
+                                            <i class="bi bi-list-check me-1"></i> Drink Lists
                                         </button>
                                     </div>
                                     <input id="databaseSearchQuery" class="form-control" placeholder="Search term">

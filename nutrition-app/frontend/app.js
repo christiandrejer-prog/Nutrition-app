@@ -104,6 +104,7 @@ function refreshAppData() {
     loadFoods();
     loadMeals();
     loadDrinks();
+    loadDrinkLists();
 }
 
 function escapeHtml(text) {
@@ -121,6 +122,7 @@ let foods = [];
 let meals = [];
 let drinks = [];
 let intakeSummary = null;
+let hoverBox = null;
 
 // Edit mode flags
 let editingNutrients = false;
@@ -131,6 +133,7 @@ let editingFoodDetails = false;
 
 // Delete mode flags
 let consumedMealsDeleteMode = false;
+let drinkListDeleteMode = false;
 
 // State for database search modals
 let databaseSearchState = { type: 'foods', query: '', page: 1, pageSize: 10, results: [] };
@@ -144,6 +147,7 @@ async function initApp() {
     loadFoods();
     loadMeals();
     loadDrinks();
+    loadDrinkLists();
     applyStoredTheme();
 }
 
@@ -423,14 +427,20 @@ function registerSidebarHandlers() {
             const action = el.dataset.action;
             try {
                 switch (action) {
-                    case 'add-nutrient':
-                        showModalById('modalAddNutrient');
+                    case 'create-nutrient':
+                        showModalById('modalCreateNutrient');
                         break;
-                    case 'add-food':
-                        showModalById('modalAddFood');
+                    case 'create-food':
+                        showModalById('modalCreateFood');
                         break;
                     case 'create-meal-prep':
                         showModalById('modalCreateMealPrep');
+                        break;
+                    case 'create-drink':
+                        showModalById('modalCreateDrink');
+                        break;
+                    case 'create-drink-list':
+                        showModalById('modalCreateDrinkList');
                         break;
                     case 'create-drink-prep':
                         renderDrinkPrepOutput();
@@ -451,7 +461,10 @@ function registerSidebarHandlers() {
                         renderHomeOutput();
                         break;
                     case 'dashboard':
-                        renderDashboardOutput();
+                        renderMealDashboardOutput();
+                        break;
+                    case 'drink-dashboard':
+                        renderDrinkDashboardOutput();
                         break;
                     case 'account':
                         renderProfileOutput();
@@ -515,6 +528,40 @@ async function submitAddNutrient() {
     }
 }
 
+async function submitAddDrink() {
+    const name = document.getElementById('modalDrinkName').value.trim();
+    if (!name) { alert('Enter drink name'); return; }
+    const response = await fetch(`${API_URL}/drinks/`, {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({name})
+    }).catch(e => ({ok:false, error:e}));
+    if (response && response.ok) {
+        const m = document.getElementById('modalCreateDrink');
+        if (m && typeof bootstrap !== 'undefined') bootstrap.Modal.getInstance(m)?.hide();
+        document.getElementById('modalDrinkName').value = '';
+        await loadDrinks();
+    } else {
+        alert('Failed to add drink');
+    }
+}
+
+async function submitAddDrinkList() {
+    const name = document.getElementById('modalDrinkListName').value.trim();
+    if (!name) { alert('Enter drink list name'); return; }
+    const response = await fetch(`${API_URL}/drink-lists/`, {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({name})
+    }).catch(e => ({ok:false, error:e}));
+    if (response && response.ok) {
+        const m = document.getElementById('modalCreateDrinkList');
+        if (m && typeof bootstrap !== 'undefined') bootstrap.Modal.getInstance(m)?.hide();
+        document.getElementById('modalDrinkListName').value = '';
+        await loadDrinkLists();
+    } else {
+        alert('Failed to add drink list');
+    }
+}
+
 async function submitAddFood() {
     const name = document.getElementById('modalFoodName').value.trim();
     const brand = document.getElementById('modalFoodBrand').value.trim();
@@ -566,8 +613,10 @@ function openCreateFromSearch() {
                 openCreateFoodModal();
             } else if (type === 'meals') {
                 openCreateMealPrepModal();
+            } else if (type === 'drinks') {
+                openCreateDrinkModal();
             } else {
-                renderDrinkPrepOutput();
+                openCreateDrinkListModal();
             }
         });
 
@@ -595,7 +644,7 @@ function renderHomeOutput() {
     output.scrollIntoView({behavior: 'smooth'});
 }
 
-async function renderDashboardOutput() {
+async function renderMealDashboardOutput() {
     const output = document.getElementById('appOutputSection');
     if (!output) return;
     output.innerHTML = `
@@ -623,7 +672,7 @@ async function renderDashboardOutput() {
                             <div class="mb-3">
                                 <p class="form-label">Choose a meal from the database</p>
                             </div>
-                            <button class="btn btn-primary btn-sm mb-3" type="button" onclick="addConsumedMeal()">Add consumed meal</button>
+                            <button class="btn btn-primary btn-sm mb-3" type="button" onclick="addConsumedMealUI()">Add consumed meal</button>
                             <button class="btn btn-danger btn-sm mb-3" type="button" onclick="toggleConsumedMealDeleteMode()">Remove consumed meal</button>
                             <div id="dashboardConsumedMealsList" class="mb-2">
                                 <div class="text-muted">Loading today's consumed meals...</div>
@@ -724,60 +773,6 @@ async function loadDashboardConsumedMeals() {
     }
 }
 
-async function addConsumedMeal() {
-    openSearchDatabaseModal('meals');
-}
-
-function toggleConsumedMealDeleteMode() {
-
-    consumedMealsDeleteMode = !consumedMealsDeleteMode;
-
-    const btn = document.querySelector('[onclick="toggleConsumedMealDeleteMode()"]');
-
-    if (btn) {
-        btn.textContent = consumedMealsDeleteMode
-            ? 'Exit delete mode'
-            : 'Remove a consumed meal';
-    }
-
-    loadDashboardConsumedMeals();
-}
-
-
-async function renderStatusOutput() {
-    const output = document.getElementById('appOutputSection');
-    if (!output) return;
-    output.innerHTML = `
-        <div class="card mb-4 shadow-sm">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <div>
-                    <h3 class="h5 mb-1">System Status</h3>
-                    <p class="text-muted mb-0">Checks backend and database availability.</p>
-                </div>
-                <button class="btn btn-sm btn-outline-primary" type="button" onclick="renderStatusOutput()">Refresh</button>
-            </div>
-            <div class="card-body" id="statusInfo">
-                <p>Loading backend status...</p>
-            </div>
-        </div>
-    `;
-    await loadStatus();
-    output.scrollIntoView({behavior: 'smooth'});
-}
-
-async function loadDrinks() {
-    const requestedUrl = `${API_URL}/drinks/`;
-    try {
-        const response = await fetch(requestedUrl);
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status} ${response.statusText}`);
-        }
-        drinks = await response.json();
-    } catch (error) {
-        console.warn('Unable to load drinks:', error);
-        drinks = [];
-    }
-}
 
 async function loadDashboardIntakeSummary() {
     const summaryContainer = document.getElementById('dashboardIntakeSummary');
@@ -829,6 +824,790 @@ async function loadDashboardIntakeSummary() {
     });
 }
 
+
+function addConsumedMealUI() {
+    openSearchDatabaseModal('meals');
+}
+    
+
+
+async function addConsumedMeal() {
+    
+}
+
+function toggleConsumedMealDeleteMode() {
+
+    consumedMealsDeleteMode = !consumedMealsDeleteMode;
+
+    const btn = document.querySelector('[onclick="toggleConsumedMealDeleteMode()"]');
+
+    if (btn) {
+        btn.textContent = consumedMealsDeleteMode
+            ? 'Exit delete mode'
+            : 'Remove a consumed meal';
+    }
+
+    loadDashboardConsumedMeals();
+}
+
+
+async function renderStatusOutput() {
+    const output = document.getElementById('appOutputSection');
+    if (!output) return;
+    output.innerHTML = `
+        <div class="card mb-4 shadow-sm">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div>
+                    <h3 class="h5 mb-1">System Status</h3>
+                    <p class="text-muted mb-0">Checks backend and database availability.</p>
+                </div>
+                <input type="text" id="apiUrlInput" class="form-control form-control-sm w-auto" placeholder="API URL" value="${escapeHtml(API_URL)}" style="max-width: 300px;" oninput="setApiUrlFromInput()">
+                <button class="btn btn-sm btn-outline-primary" type="button" onclick="renderStatusOutput()">Refresh</button>
+            </div>
+            <div class="card-body" id="statusInfo">
+                <p>Loading backend status...</p>
+            </div>
+        </div>
+    `;
+    await loadStatus();
+    output.scrollIntoView({behavior: 'smooth'});
+}
+
+
+async function renderDrinkDashboardOutput() {
+    const output = document.getElementById('appOutputSection');
+    if (!output) return;
+    output.innerHTML = `
+        <div class="mb-4">
+            <h3 class="mb-3">Drinks Dashboard</h3>
+            <div class="row g-3">
+                <div class="col-12 col-md-4">
+                    <div class="card h-100 shadow-sm">
+                        <div class="card-body">
+                            <h5 class="card-title">Visualization</h5>
+                            <div id="dashboardDrinkSummary">
+                                <p class="text-muted">Loading visualization summary...</p>
+                            </div>
+                            <div class="mt-3">
+                                <canvas id="dashboardDrinkChart" width="300" height="240"></canvas>
+                            </div>
+                            <p class="mt-3"><strong><i>(W.I.P)</i></strong></p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-md-4">
+                    <div class="card h-100 shadow-sm">
+                        <div class="card-body">
+                            <h5 class="card-title">Drinks list</h5>
+                            <div class="mb-3">
+                                <p class="form-label">Choose a drinks list from the database</p>
+                            </div>
+                                <button class="btn btn-primary btn-sm mb-3" type="button" onclick="selectDrinkListUI()">Select drink list</button><br>
+                                <button class="btn btn-primary btn-sm mb-3" type="button" onclick="addDrinkListItemUI()">Add drink to list</button>
+                                <button class="btn btn-danger btn-sm mb-3" type="button" id="toggle-remove-drink-btn" onclick="toggleDrinkListDeleteMode()">Remove drink from list</button>
+                            <div id="dashboardDrinkList" class="mb-2">
+                                <div class="text-muted">Loading drinks list...</div>
+                            </div>
+                            <p class="mt-3 text-muted small">Add drinks directly to a drinks list.</p>
+                            <p class="mt-3 text-muted small"><strong><i>(W.I.P.)</i></strong></p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-md-4">
+                    <div class="card h-100 shadow-sm">
+                        <div class="card-body">
+                            <h5 class="card-title">Undecided</h5>
+                            <p class="card-text">Placeholder for a future feature, maybe something related to drink preferences / recommendations or even just garnishes.</p>
+                            <div class="placeholder-glow">
+                                <span class="placeholder col-6"></span>
+                                <span class="placeholder col-8"></span>
+                                <span class="placeholder col-4"></span>
+                            </div>
+                            <p class="mt-3"><strong><i>(Future feature)</i></strong></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+
+    await loadDashboardDrinkListsItems(prompt_asw_LIST_ID);
+    await loadDashboardDrinkChart(prompt_asw_LIST_ID);
+    output.scrollIntoView({behavior: 'smooth'});
+}
+
+// Uses placeholder prompt for now, but ideally this would be a sidebar or modal interface allowing you to select a drink from the database, specify quantity and optionally customize ingredients, then add it to the currently selected drink list in the dashboard, and finally reload the list and visualization to reflect changes.
+async function addDrinkListItemUI() {
+    prompt_asw_DRINK_ID = prompt('Add drink to list functionality is not implemented yet. This would allow you to add a drink from the database to the currently selected drink list, specifying quantity and optionally customizing ingredients.', 'OK');
+    //openSearchDatabaseModal('drinks');
+    console.log('Add drink to list UI placeholder:', prompt_asw_DRINK_ID);
+
+    if (!prompt_asw_DRINK_ID) return;
+    // For now, just reload the list to reflect changes after "adding" a drink
+    await addDrinkListItem(prompt_asw_LIST_ID, prompt_asw_DRINK_ID);
+    await loadDashboardDrinkListsItems(prompt_asw_LIST_ID);
+    await loadDashboardDrinkChart(prompt_asw_LIST_ID);
+
+    return prompt_asw_DRINK_ID;
+}
+// Uses placeholder prompt for now, but ideally this would be a sidebar or modal interface allowing you to select from existing drink lists in the database, and then load the selected list into the dashboard for visualization and management.
+async function selectDrinkListUI() {
+    prompt_asw_LIST_ID = prompt('Select drink list functionality is not implemented yet. This would allow you to choose from existing drink lists in the database and load them into the dashboard for visualization and management.', 'OK');
+    //openSearchDatabaseModal('drink lists');
+    console.log('Select drink list UI placeholder:', prompt_asw_LIST_ID);
+    
+    if (!prompt_asw_LIST_ID) return;
+    await loadDashboardDrinkListsItems(prompt_asw_LIST_ID);
+    await loadDashboardDrinkChart(prompt_asw_LIST_ID);
+    
+    return prompt_asw_LIST_ID;
+}
+
+
+async function loadDashboardDrinkListsItems(listId) {
+
+    const container =
+        document.getElementById('dashboardDrinkList');
+
+    if (!container) return;
+
+    container.innerHTML =
+        '<div class="text-muted">Loading drink lists...</div>';
+
+    try {
+
+        const response =
+            await fetch(`${API_URL}/drinks/lists`);
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+
+        const lists =
+            await response.json();
+
+        if (!lists.length) {
+
+            container.innerHTML =
+                '<div class="text-muted">No drink lists.</div>';
+
+            return;
+        }
+
+        container.innerHTML = '';
+
+        // =========================
+        // CASE 1: NO LIST SELECTED → show list picker
+        // =========================
+        if (!listId) {
+
+            const grid =
+                document.createElement('div');
+
+            grid.className = 'drink-grid';
+
+            lists.forEach(list => {
+
+                const item =
+                    document.createElement('div');
+
+                item.className = 'drink-item';
+
+                item.innerHTML = `
+                    <div class="drink-name">
+                        ${escapeHtml(list.name)}
+                    </div>
+                    <div class="small text-muted">
+                        ${list.item_count} items
+                    </div>
+                `;
+
+                item.addEventListener('click', async () => {
+
+                    // FUTURE IMPROVEMENT:
+                    // replace click with sidebar / modal selector
+
+                    await loadDashboardDrinkListsItems(list.id);
+                    await loadDashboardDrinkChart(list.id);
+                });
+
+                grid.appendChild(item);
+            });
+
+            container.appendChild(grid);
+
+            return;
+        }
+
+        // =========================
+        // CASE 2: LIST SELECTED → fetch items
+        // =========================
+
+        const listResponse =
+            await fetch(`${API_URL}/drinks/lists/${listId}`);
+
+        if (!listResponse.ok) {
+            throw new Error(`HTTP ${listResponse.status}`);
+        }
+
+        const selectedList =
+            await listResponse.json();
+
+        const entries =
+            selectedList.items || [];
+
+        if (!entries.length) {
+
+            container.innerHTML =
+                '<div class="text-muted">This list is empty.</div>';
+
+            return;
+        }
+
+        const grid =
+            document.createElement('div');
+
+        grid.className = 'drink-grid';
+
+        entries.forEach(entry => {
+
+            const drink =
+                entry.drink ||
+                drinks.find(d => d.id === entry.drink_id);
+
+            const item =
+                document.createElement('div');
+
+            item.className = 'drink-item';
+
+            item.innerHTML = `
+                <div class="drink-name">
+                    ${escapeHtml(
+                        drink?.name ||
+                        `Drink ${entry.drink_id}`
+                    )}
+                </div>
+            `;
+
+            // reuse your hover system
+            item.dataset.details = JSON.stringify({
+                quantity: entry.quantity || 1,
+                description: drink?.description || 'No description',
+                alcohol: drink?.alcohol_percentage || 'N/A',
+                category: drink?.category || 'Unknown'
+            });
+
+            item.addEventListener('mouseenter', showDrinkHover);
+            item.addEventListener('mouseleave', hideDrinkHover);
+
+            grid.appendChild(item);
+        });
+
+        container.appendChild(grid);
+
+    } catch (error) {
+
+        container.innerHTML = `
+            <div class="text-danger">
+                ${escapeHtml(error.message)}
+            </div>
+        `;
+    }
+}
+
+///// FUTURE IMPROVEMENTS --- 
+// MAKE THIS A REUSABLE COMPONENT FOR ANY ITEM WITH DETAILS, NOT JUST DRINKS
+function showDrinkHover(event) {
+
+    const data =
+        JSON.parse(
+            event.currentTarget.dataset.details
+        );
+
+    hoverBox =
+        document.createElement('div');
+
+    hoverBox.className =
+        'drink-hover-box';
+
+    hoverBox.innerHTML = `
+        <div><strong>Quantity:</strong> ${data.quantity}</div>
+        <div><strong>Category:</strong> ${data.category}</div>
+        <div><strong>Alcohol:</strong> ${data.alcohol}</div>
+        <div class="mt-1 text-muted">
+            ${escapeHtml(data.description)}
+        </div>
+    `;
+
+    document.body.appendChild(hoverBox);
+
+    const rect =
+        event.currentTarget.getBoundingClientRect();
+
+    hoverBox.style.left =
+        `${rect.left}px`;
+
+    hoverBox.style.top =
+        `${rect.bottom + 10}px`;
+}
+// MAKE THIS A REUSABLE COMPONENT FOR ANY ITEM WITH DETAILS, NOT JUST DRINKS
+function hideDrinkHover() {
+
+    if (hoverBox) {
+
+        hoverBox.remove();
+
+        hoverBox = null;
+    }
+}
+
+async function loadDashboardDrinkChart(listId) {
+
+    const summaryContainer =
+        document.getElementById('dashboardDrinkSummary');
+
+    const chartCanvas =
+        document.getElementById('dashboardDrinkChart');
+
+    if (!summaryContainer || !chartCanvas) return;
+
+    const response =
+        await fetch(`${API_URL}/drinks/lists/${listId}`);
+
+    if (!response.ok) return;
+
+    const list =
+        await response.json();
+
+    const entries =
+        list.items || [];
+
+    if (!entries.length) {
+
+        summaryContainer.innerHTML =
+            '<div class="text-muted">No drinks added to list.</div>';
+
+        return;
+    }
+
+    const ingredientTotals = {};
+    const ingredientCosts = {};
+
+    entries.forEach(entry => {
+
+        const drink =
+            entry.drink;
+
+        if (!drink?.ingredients?.length) return;
+
+        const quantity =
+            Number(entry.quantity || 1);
+
+        drink.ingredients.forEach(ingredient => {
+
+            const name =
+                ingredient.food?.name ||
+                ingredient.name ||
+                'Unknown';
+
+            const amount =
+                Number(ingredient.amount || 0);
+
+            const food =
+                ingredient.food;
+
+            // IMPORTANT: price is not per_unit anymore in your API
+            const unitPrice =
+                Number(food?.price || 0);
+
+            const totalAmount =
+                amount * quantity;
+
+            const base_amount =
+                Number(ingredient.food.base_amount || 1);
+
+            const totalCost =
+                (totalAmount/base_amount) * unitPrice;
+
+            ingredientTotals[name] =
+                (ingredientTotals[name] || 0)
+                + totalAmount;
+
+            ingredientCosts[name] =
+                (ingredientCosts[name] || 0)
+                + totalCost;
+        });
+    });
+
+    const labels =
+        Object.keys(ingredientTotals);
+
+    const quantityData =
+        labels.map(n => ingredientTotals[n]);
+
+    const costData =
+        labels.map(n => ingredientCosts[n]);
+
+    summaryContainer.innerHTML = `
+        <div>
+            To make: <strong>${entries.reduce((sum, entry) => sum + (Number(entry.quantity) || 1), 0)}</strong> drinks
+        </div>
+        <div class="small text-muted">
+            Ingredient usage overview
+        </div>
+    `;
+
+    if (window.dashboardDrinkChart instanceof Chart) {
+        window.dashboardDrinkChart.destroy();
+    }
+
+    const ctx =
+        chartCanvas.getContext('2d');
+
+    window.dashboardDrinkChart =
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels,
+                datasets: [
+                    {
+                        label: 'Quantity',
+                        data: quantityData
+                    },
+                    {
+                        label: 'Cost (DKK)',
+                        data: costData
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+}
+
+
+
+
+
+
+
+
+
+async function loadDrinks() {
+    const requestedUrl = `${API_URL}/drinks/`;
+    try {
+        const response = await fetch(requestedUrl);
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status} ${response.statusText}`);
+        }
+        drinks = await response.json();
+    } catch (error) {
+        console.warn('Unable to load drinks:', error);
+        drinks = [];
+    }
+}
+
+async function loadDrinkLists() {
+    const requestedUrl = `${API_URL}/drinks/lists`;
+    try {
+        const response = await fetch(requestedUrl);
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status} ${response.statusText}`);
+        }
+        drinkLists = await response.json();
+    } catch (error) {
+        console.warn('Unable to load drink lists:', error);
+        drinkLists = [];
+    }
+}
+
+// Utility to map search types to their corresponding API endpoints
+function getDatabaseEndpoint(type) {
+    // This function maps the user-friendly search type to the actual API endpoint. 
+    // It allows us to keep the UI labels separate from the backend structure, 
+    // and makes it easier to manage any differences in naming conventions or endpoint paths.
+    const endpointMap = {
+        'foods': 'foods/',
+        'meals': 'meals/',
+        'drinks': 'drinks/',
+        'drink lists': 'drinks/lists'
+    };
+
+    return endpointMap[type] || type;
+}
+
+
+
+////// --- FUTURE FUNCTION PLACEHOLDERS --- //////
+// -----------------------------------------------
+// Load api data functions [GET]
+
+    // MISSING LOAD FUNCTIONS:
+    // NOT DONE MORE TO COME HERE, JUST A PLACEHOLDER FOR NOW TO SHOW INTENT AND GENERAL STRUCTURE OF HOW THESE FUNCTIONS WOULD BE IMPLEMENTED.
+
+
+
+////// Create functions [POST]
+
+
+    // Similar to the submitAddNutrient and submitAddFood functions, create functions for meals, drinks, and drink lists would involve gathering input from the user through modals or forms, validating that input, sending a POST request to the appropriate API endpoint with the new item data, and then refreshing the relevant data in the UI to include the newly created item. Each type of item would have its own specific fields and validation requirements, but they would all follow this general pattern for consistency across the application.
+    // NOT DONE MORE TO COME HERE, JUST A PLACEHOLDER FOR NOW TO SHOW INTENT AND GENERAL STRUCTURE OF HOW THESE FUNCTIONS WOULD BE IMPLEMENTED.
+
+
+
+////// Add to functions [POST]    
+// Work in progress \/\/\/
+async function addDrinkListItem(listId, drinkId, quantity = prompt('Enter quantity (default 1):', '1')) {
+
+    const response = await fetch(
+        `${API_URL}/drinks/lists/${listId}/items`,
+        {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                drink_id: parseInt(drinkId, 10),
+                quantity
+            })
+        }
+    );
+
+    if (!response.ok) {
+        throw new Error(
+            `HTTP ${response.status} ${response.statusText}`
+        );
+    }
+
+    await loadDrinkLists();
+    await loadDashboardDrinkListsItems(listId);
+    await loadDashboardDrinkChart(listId);
+}
+
+
+    // For example, the addDrinkListItem function would allow users to add a drink to a specific drink list by sending a POST request to the backend with the drink ID and quantity. This function would be called from the UI when a user selects a drink and specifies how many they want to add to the list. After successfully adding the item, it would refresh the drink lists data to reflect the new addition in the UI.
+    // NOT DONE MORE TO COME HERE, JUST A PLACEHOLDER FOR NOW TO SHOW INTENT AND GENERAL STRUCTURE OF HOW THESE FUNCTIONS WOULD BE IMPLEMENTED.
+
+
+
+////// Edit functions [PUT]
+// Edit name in search functions
+function editSearchName({
+    id,
+    collection,
+    array,
+    endpoint,
+    title = 'Name',
+    buildBody,
+    reload,
+    successMessage
+}) {
+    const item = array.find(i => String(i.id) === String(id));
+    if (!item) return;
+
+    const name = prompt(title, item.name);
+    if (name === null) return;
+
+    const body = buildBody ? buildBody(item, name.trim()) : { name: name.trim() };
+
+    fetch(`${API_URL}/${endpoint}/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+    }).then(async response => {
+        if (response.ok) {
+            await reload();
+            alert(successMessage || 'Updated.');
+        } else {
+            const error = await response.json().catch(() => ({}));
+            alert('Update failed: ' + (error.detail || response.statusText));
+        }
+    });
+}
+
+
+function editSearchFood(foodId) {
+    editSearchName({
+        id: foodId,
+        array: foods,
+        endpoint: 'foods',
+        title: 'Food name',
+        reload: loadFoods,
+        successMessage: 'Food updated.',
+        buildBody: (food, name) => ({
+            name,
+            brand: food.brand || null,
+            price: food.price
+        })
+    });
+}
+
+
+function editSearchMeal(mealId) {
+    editSearchName({
+        id: mealId,
+        array: meals,
+        endpoint: 'meals',
+        title: 'Meal prep name',
+        reload: loadMeals,
+        successMessage: 'Meal prep updated.'
+    });
+}
+
+
+function editSearchDrink(drinkId) {
+    editSearchName({
+        id: drinkId,
+        array: drinks,
+        endpoint: 'drinks',
+        title: 'Drink name',
+        reload: loadDrinks,
+        successMessage: 'Drink updated.'
+    });
+}
+
+
+function editSearchDrinkList(listId) {
+    editSearchName({
+        id: listId,
+        array: drinkLists,
+        endpoint: 'drinks/lists',
+        title: 'Drink list name',
+        reload: loadDrinkLists,
+        successMessage: 'Drink list updated.'
+    });
+}
+
+    //for database items (foods, meals, drinks, drink lists) would go here, following a similar pattern to the nutrient edit functions. They would typically involve fetching the current item data, displaying it in a modal form for editing, and then submitting the updated data back to the backend API. 
+    // NOT DONE MORE TO COME HERE, JUST A PLACEHOLDER FOR NOW TO SHOW INTENT AND GENERAL STRUCTURE OF HOW THESE FUNCTIONS WOULD BE IMPLEMENTED.
+
+
+
+
+////// Delete functions [DELETE]
+
+// Delete type mapping to avoid repetitive code for each entity type
+const ENTITY_CONFIG = {
+    "foods": {
+        confirm: "Delete this food item?",
+        reload: loadFoods,
+        details: "foodDetails"
+    },
+    "meals": {
+        confirm: "Delete this meal?",
+        reload: loadMeals,
+        details: "mealDetails"
+    },
+    "drinks": {
+        confirm: "Delete this drink?",
+        reload: loadDrinks,
+        details: "drinkDetails"
+    },
+    "drink lists": {
+        confirm: "Delete this drink list?",
+        reload: loadDrinkLists,
+        details: "drinkListDetails"
+    }
+};
+
+async function deleteEntityByType(type, id) {
+    const config = ENTITY_CONFIG[type];
+    if (!config) throw new Error("Unknown entity type: " + type);
+
+    if (!confirm(config.confirm)) return;
+    api = getDatabaseEndpoint(type);
+    const response = await fetch(`${API_URL}/${api}${api === "drinks/lists" ? "/" : ""}${id}`, {
+        method: "DELETE"
+    });
+
+    const result = await response.json().catch(() => ({}));
+
+    if (response.ok) {
+        config.reload?.();
+        if (config.details) {
+            document.getElementById(config.details)?.replaceChildren();
+        }
+    } else {
+        alert("Error deleting: " + (result.detail || JSON.stringify(result)));
+    }
+}
+
+// Work in progress \/\/\/
+async function deleteDrinkListItem(item_id) {
+    if (!confirm('Are you sure you want to remove this drink from the list?')) {
+        return;
+    }
+    if (!prompt_asw_LIST_ID) {
+        alert('No drink list selected.');
+        return;
+    }
+    try {
+
+        const response = await fetch(
+            `${API_URL}/drinks/lists/${prompt_asw_LIST_ID}/items/${item_id}`, // Replace ITEM_ID with the actual item ID to delete
+            {
+                method: 'DELETE'
+            }
+        );
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+
+        await loadDrinkLists();
+        await loadDashboardDrinkListsItems(prompt_asw_LIST_ID);
+        await loadDashboardDrinkChart(prompt_asw_LIST_ID);
+
+    } catch (error) {
+
+        console.error(
+            'Unable to delete drink list item',
+            error
+        );
+
+        alert(
+            `Unable to delete item: ${error.message}`
+        );
+    }
+}
+
+    // Similar to the edit functions, delete functions for database items would involve confirming the user's intent to delete, sending a DELETE request to the appropriate API endpoint, and then refreshing the relevant data in the UI to reflect the deletion.
+    // NOT DONE MORE TO COME HERE, JUST A PLACEHOLDER FOR NOW TO SHOW INTENT AND GENERAL STRUCTURE OF HOW THESE FUNCTIONS WOULD BE IMPLEMENTED.
+
+
+////// Toggle functions for buttons
+
+// Work in progress \/\/\/
+function toggleDrinkListDeleteMode() {
+                // Not in use until the delete functionality for drink list items 
+                // is implemented, but this would toggle a mode in the UI where 
+                // delete buttons appear next to each drink in the selected drink list, 
+                // allowing the user to remove drinks from the list. It would likely involve 
+                // setting a state variable (like drinkListDeleteMode) and then conditionally 
+                // rendering delete buttons in the drink list items based on that state. 
+                // When a delete button is clicked, it would call the deleteDrinkListItem function 
+                // to remove that item from the backend and refresh the list.
+    deleteDrinkListItem(item_id=prompt('Remove drink from list functionality is not implemented yet. This would allow you to remove a drink from the currently selected drink list in the dashboard.', 'OK'));
+
+    //drinkListDeleteMode = !drinkListDeleteMode;
+    const btn = document.getElementById("toggle-remove-drink-btn");
+    btn.textContent = drinkListDeleteMode ? "Exit delete mode" : "Remove drink from list";
+
+    loadDrinkLists();
+}
+
+
+
+
+// Database search handlers:
 function setDatabaseSearchType(type) {
     databaseSearchState.type = type;
     const buttons = document.querySelectorAll('#databaseSearchTypeButtons [data-search-type]');
@@ -837,10 +1616,11 @@ function setDatabaseSearchType(type) {
     });
     const createBtn = document.getElementById('databaseSearchCreateBtn');
     if (createBtn) {
-        createBtn.textContent = type === 'foods' ? 'Create Food' : type === 'meals' ? 'Create Meal Prep' : 'Create Drink';
+        createBtn.textContent = type === 'foods' ? 'Create Food' : type === 'meals' ? 'Create Meal Prep' : type === 'drinks' ? 'Create Drink' : 'Create Drink List';
         createBtn.disabled = false;
     }
 }
+
 
 async function openSearchDatabaseModal(searchType) {
     const queryField = document.getElementById('databaseSearchQuery');
@@ -851,9 +1631,25 @@ async function openSearchDatabaseModal(searchType) {
     databaseSearchState.page = 1;
     setDatabaseSearchType(searchType);
     queryField.value = '';
-    results.innerHTML = `<div class="alert alert-secondary">Type a search term and press Search to query the backend.${searchType === 'drinks' ? ' Drink search is available via downloaded drink records.' : ''}</div>`;
+    results.innerHTML = `<div class="alert alert-secondary">Type a search term and press Search to query the backend.</div>`;
     showModalById('modalSearchDatabase');
 }
+
+
+function buildSearchableText(item) {
+    // Universal search fields across ALL database types
+    return [
+        item.name,
+        item.brand,
+        item.description,
+        item.type,
+        item.category,
+        item.tags ? item.tags.join(' ') : ''
+    ]
+    .filter(Boolean)
+    .join(' ');
+}
+
 
 async function doSearchDatabase() {
     const query = (document.getElementById('databaseSearchQuery').value || '').trim().toLowerCase();
@@ -863,39 +1659,43 @@ async function doSearchDatabase() {
     databaseSearchState.page = 1;
     databaseSearchState.results = [];
 
-    if (type === 'drinks') {
-        if (!drinks.length) {
-            await loadDrinks();
-        }
-        databaseSearchState.results = drinks.filter(item => {
-            const text = `${item.name}`.toLowerCase();
-            return !query || text.includes(query);
-        });
-        renderDatabaseSearchResults();
-        return;
-    }
 
-    const requestedUrl = `${API_URL}/${type}/`;
+
+    const requestedUrl = `${API_URL}/${getDatabaseEndpoint(type)}`;
+    console.log('Fetching from URL:', requestedUrl);
+
     try {
         const response = await fetch(requestedUrl);
+
         if (!response.ok) {
             throw new Error(`HTTP ${response.status} ${response.statusText}`);
         }
+
         const data = await response.json();
         databaseSearchState.results = Array.isArray(data) ? data : [];
+
     } catch (error) {
         const container = document.getElementById('databaseSearchResults');
+
         if (container) {
-            container.innerHTML = `<div class="alert alert-danger">Unable to load ${type} from backend: ${escapeHtml(error.message || String(error))}</div>`;
+            container.innerHTML = `
+                <div class="alert alert-danger">
+                    Unable to load ${type} from backend:
+                    ${escapeHtml(error.message || String(error))}
+                </div>`;
         }
         return;
     }
 
+    // ✅ UNIFIED FILTER LOGIC (ALL TYPES)
     databaseSearchState.results = databaseSearchState.results.filter(item => {
-        const text = type === 'foods'
-            ? `${item.name} ${item.brand || ''}`.toLowerCase()
-            : `${item.name}`.toLowerCase();
-        return !query || text.includes(query);
+
+        const text = buildSearchableText(item).toLowerCase();
+
+        if (!query) return true;
+
+        const words = query.split(' ').filter(Boolean);
+        return words.every(w => text.includes(w));
     });
 
     renderDatabaseSearchResults();
@@ -908,191 +1708,520 @@ function setDatabaseSearchPage(page) {
     renderDatabaseSearchResults();
 }
 
+
+// Database search results rendering:
 function renderDatabaseSearchResults() {
+    // This function will render the search results based on the current state of the database search, including the type of items being searched, the query, pagination, and the results themselves. It will delegate to specific rendering functions for each type (foods, drinks, meals, drink lists) and handle cases where there are no results or if an unknown type is somehow set.
+    console.log('Rendering search results with state:', databaseSearchState);
     const container = document.getElementById('databaseSearchResults');
     if (!container) return;
     const {type, query, page, pageSize, results} = databaseSearchState;
 
-    if (type === 'drinks') {
-        const totalCount = results.length;
-        if (!totalCount) {
-            const createButton = '<button class="btn btn-sm btn-success mt-2" onclick="renderDrinkPrepOutput()">Create Drink Prep</button>';
+    switch(type) {
+
+        case 'foods':
+            renderFoods({
+                container,
+                results,
+                query,
+                page,
+                pageSize
+            });
+            break;
+
+        case 'meals':
+            renderMeals({
+                container,
+                results,
+                query,
+                page,
+                pageSize
+            });
+            break;
+
+        case 'drinks':
+            renderDrinks({
+                container,
+                results,
+                query,
+                page,
+                pageSize
+            });
+            break;
+
+        case 'drink lists':
+            renderDrinkLists({
+                container,
+                results,
+                query,
+                page,
+                pageSize
+            });
+            break;
+
+        default:
+
             container.innerHTML = `
-                <div class="alert alert-warning">No drinks found${query ? ` for “${escapeHtml(query)}”` : ''}.</div>
-                <div class="text-muted small mb-2">0 results</div>
-                ${createButton}
+                <div class="alert alert-danger">
+                    Unknown search type
+                </div>
             `;
-            return;
-        }
-
-        const startIndex = (page - 1) * pageSize;
-        const pageResults = results.slice(startIndex, startIndex + pageSize);
-        const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
-
-        const header = document.createElement('div');
-        header.className = 'd-flex flex-column flex-md-row justify-content-between align-items-start gap-2 mb-3';
-        header.innerHTML = `
-            <div><strong>${totalCount}</strong> drink${totalCount === 1 ? '' : 's'} found</div>
-            <div class="text-muted"><small>Showing ${startIndex + 1}-${Math.min(totalCount, startIndex + pageSize)} of ${totalCount}</small></div>
-        `;
-
-        const list = document.createElement('div');
-        list.className = 'list-group';
-
-        pageResults.forEach(item => {
-            const entry = document.createElement('div');
-            entry.className = 'list-group-item d-flex flex-column flex-md-row justify-content-between align-items-start gap-2';
-            entry.innerHTML = `<div><strong>${escapeHtml(item.name)}</strong>${item.base_amount && item.base_unit ? ` <small class="text-muted">(${escapeHtml(item.base_amount + ' ' + item.base_unit)})</small>` : ''}</div>`;
-
-            const actions = document.createElement('div');
-            actions.className = 'btn-toolbar gap-2 mt-2 mt-md-0';
-
-            const viewBtn = document.createElement('button');
-            viewBtn.type = 'button';
-            viewBtn.className = 'btn btn-sm btn-outline-primary';
-            viewBtn.textContent = 'View';
-            viewBtn.addEventListener('click', () => {
-                alert(`Drink details not available yet for ${item.name}`);
-            });
-            actions.appendChild(viewBtn);
-
-            const prepBtn = document.createElement('button');
-            prepBtn.type = 'button';
-            prepBtn.className = 'btn btn-sm btn-outline-success';
-            prepBtn.textContent = 'Prep';
-            prepBtn.addEventListener('click', () => {
-                renderDrinkPrepOutput();
-            });
-            actions.appendChild(prepBtn);
-
-            entry.appendChild(actions);
-            list.appendChild(entry);
-        });
-
-        const pagination = document.createElement('nav');
-        pagination.className = 'mt-3';
-        const pagList = document.createElement('ul');
-        pagList.className = 'pagination pagination-sm';
-
-        const prev = document.createElement('li');
-        prev.className = `page-item ${page <= 1 ? 'disabled' : ''}`;
-        prev.innerHTML = `<button class="page-link" type="button">Previous</button>`;
-        if (page > 1) prev.querySelector('button').addEventListener('click', () => setDatabaseSearchPage(page - 1));
-        pagList.appendChild(prev);
-
-        const next = document.createElement('li');
-        next.className = `page-item ${page >= totalPages ? 'disabled' : ''}`;
-        next.innerHTML = `<button class="page-link" type="button">Next</button>`;
-        if (page < totalPages) next.querySelector('button').addEventListener('click', () => setDatabaseSearchPage(page + 1));
-        pagList.appendChild(next);
-
-        pagination.appendChild(pagList);
-
-        container.innerHTML = '';
-        container.appendChild(header);
-        container.appendChild(list);
-        if (totalPages > 1) container.appendChild(pagination);
-        return;
     }
+}
 
-    const totalCount = results.length;
+
+function renderSearchResults({
+    container,
+    results,
+    query,
+    page,
+    pageSize,
+    type,
+    buttons = [],
+    createButton = '',
+    itemRenderer
+}) {
+
+    const totalCount =
+        results.length;
+
     if (!totalCount) {
-        const createButton = type === 'foods'
-            ? '<button class="btn btn-sm btn-success mt-2" onclick="openCreateFoodModal()">Create Food</button>'
-            : '<button class="btn btn-sm btn-success mt-2" onclick="openCreateMealPrepModal()">Create Meal Prep</button>';
+
         container.innerHTML = `
-            <div class="alert alert-warning">No ${type} found${query ? ` for “${escapeHtml(query)}”` : ''}.</div>
-            <div class="text-muted small mb-2">0 results</div>
+            <div class="alert alert-warning">
+                No ${escapeHtml(type)} found
+                ${query ? ` for "${escapeHtml(query)}"` : ''}
+            </div>
+
+            <div class="text-muted small mb-2">
+                0 results
+            </div>
+
             ${createButton}
         `;
+
         return;
     }
 
-    const startIndex = (page - 1) * pageSize;
-    const pageResults = results.slice(startIndex, startIndex + pageSize);
-    const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+    const startIndex =
+        (page - 1) * pageSize;
 
-    const header = document.createElement('div');
-    header.className = 'd-flex flex-column flex-md-row justify-content-between align-items-start gap-2 mb-3';
+    const pageResults =
+        results.slice(
+            startIndex,
+            startIndex + pageSize
+        );
+
+    const totalPages =
+        Math.max(
+            1,
+            Math.ceil(totalCount / pageSize)
+        );
+
+    const header =
+        document.createElement('div');
+
+    header.className =
+        'd-flex justify-content-between mb-3';
+
     header.innerHTML = `
-        <div><strong>${totalCount}</strong> result${totalCount === 1 ? '' : 's'} found</div>
-        <div class="text-muted"><small>Showing ${startIndex + 1}-${Math.min(totalCount, startIndex + pageSize)} of ${totalCount}</small></div>
+        <div>
+            <strong>${totalCount}</strong>
+            results found
+        </div>
+
+        <div class="text-muted">
+            <small>
+                Showing
+                ${startIndex + 1}
+                -
+                ${Math.min(totalCount, startIndex + pageSize)}
+            </small>
+        </div>
     `;
 
-    const list = document.createElement('div');
-    list.className = 'list-group';
+    const list =
+        document.createElement('div');
+
+    list.className =
+        'list-group';
 
     pageResults.forEach(item => {
-        const entry = document.createElement('div');
-        entry.className = 'list-group-item d-flex flex-column flex-md-row justify-content-between align-items-start gap-2';
 
-        if (type === 'foods') {
-            entry.innerHTML = `<div><strong>${escapeHtml(item.name)}</strong>${item.brand ? ` <em>(${escapeHtml(item.brand)})</em>` : ''}${item.price !== undefined && item.price !== null ? ` - ${item.price} DKK` : ''}</div>`;
-        } else {
-            entry.innerHTML = `<div><strong>${escapeHtml(item.name)}</strong></div>`;
-        }
+        const entry =
+            document.createElement('div');
 
-        const actions = document.createElement('div');
-        actions.className = 'btn-toolbar gap-2 mt-2 mt-md-0';
+        entry.className =
+            'list-group-item d-flex justify-content-between align-items-start gap-2 flex-wrap';
 
-        const viewBtn = document.createElement('button');
-        viewBtn.type = 'button';
-        viewBtn.className = 'btn btn-sm btn-outline-primary';
-        viewBtn.textContent = 'View';
-        viewBtn.addEventListener('click', () => {
-            if (type === 'foods') openSearchFood(item.id);
-            else openSearchMeal(item.id);
+        entry.innerHTML =
+            itemRenderer(item);
+
+        const actions =
+            document.createElement('div');
+
+        actions.className =
+            'btn-toolbar gap-2';
+
+        buttons.forEach(btn => {
+
+            const button =
+                document.createElement('button');
+
+            button.type = 'button';
+
+            button.className =
+                btn.className;
+
+            button.textContent =
+                btn.label;
+
+            button.addEventListener(
+                'click',
+                () => btn.onClick(item)
+            );
+
+            actions.appendChild(button);
         });
-        actions.appendChild(viewBtn);
-
-        const editBtn = document.createElement('button');
-        editBtn.type = 'button';
-        editBtn.className = 'btn btn-sm btn-outline-success';
-        editBtn.textContent = 'Edit';
-        editBtn.addEventListener('click', () => {
-            if (type === 'foods') editSearchFood(item.id);
-            else editSearchMeal(item.id);
-        });
-        actions.appendChild(editBtn);
-
-        const deleteBtn = document.createElement('button');
-        deleteBtn.type = 'button';
-        deleteBtn.className = 'btn btn-sm btn-outline-danger';
-        deleteBtn.textContent = 'Delete';
-        deleteBtn.addEventListener('click', () => {
-            if (type === 'foods') deleteFood(item.id);
-            else deleteMeal(item.id);
-        });
-        actions.appendChild(deleteBtn);
 
         entry.appendChild(actions);
+
         list.appendChild(entry);
     });
 
-    const pagination = document.createElement('nav');
-    pagination.className = 'mt-3';
-    const pagList = document.createElement('ul');
-    pagList.className = 'pagination pagination-sm';
+    container.innerHTML = '';
 
-    const prev = document.createElement('li');
-    prev.className = `page-item ${page <= 1 ? 'disabled' : ''}`;
-    prev.innerHTML = `<button class="page-link" type="button">Previous</button>`;
-    if (page > 1) prev.querySelector('button').addEventListener('click', () => setDatabaseSearchPage(page - 1));
+    container.appendChild(header);
+
+    container.appendChild(list);
+
+    renderPagination({
+        container,
+        page,
+        totalPages
+    });
+}
+
+
+function renderPagination({
+    container,
+    page,
+    totalPages
+}) {
+
+    if (totalPages <= 1)
+        return;
+
+    const pagination =
+        document.createElement('nav');
+
+    pagination.className =
+        'mt-3';
+
+    const pagList =
+        document.createElement('ul');
+
+    pagList.className =
+        'pagination pagination-sm';
+
+    const prev =
+        document.createElement('li');
+
+    prev.className =
+        `page-item ${page <= 1 ? 'disabled' : ''}`;
+
+    prev.innerHTML = `
+        <button class="page-link">
+            Previous
+        </button>
+    `;
+
+    if (page > 1) {
+
+        prev.querySelector('button')
+            .addEventListener(
+                'click',
+                () => setDatabaseSearchPage(page - 1)
+            );
+    }
+
     pagList.appendChild(prev);
 
-    const next = document.createElement('li');
-    next.className = `page-item ${page >= totalPages ? 'disabled' : ''}`;
-    next.innerHTML = `<button class="page-link" type="button">Next</button>`;
-    if (page < totalPages) next.querySelector('button').addEventListener('click', () => setDatabaseSearchPage(page + 1));
+    const next =
+        document.createElement('li');
+
+    next.className =
+        `page-item ${page >= totalPages ? 'disabled' : ''}`;
+
+    next.innerHTML = `
+        <button class="page-link">
+            Next
+        </button>
+    `;
+
+    if (page < totalPages) {
+
+        next.querySelector('button')
+            .addEventListener(
+                'click',
+                () => setDatabaseSearchPage(page + 1)
+            );
+    }
+
     pagList.appendChild(next);
 
     pagination.appendChild(pagList);
 
-    container.innerHTML = '';
-    container.appendChild(header);
-    container.appendChild(list);
-    if (totalPages > 1) container.appendChild(pagination);
+    container.appendChild(pagination);
 }
+
+
+function renderFoods(data) {
+
+    renderSearchResults({
+
+        ...data,
+
+        type: 'foods',
+
+        createButton: `
+            <button
+                class="btn btn-sm btn-success mt-2"
+                onclick="openCreateFoodModal()"
+            >
+                Create Food
+            </button>
+        `,
+
+        itemRenderer: item => `
+            <div>
+                <strong>
+                    ${escapeHtml(item.name)}
+                </strong>
+
+                ${item.brand
+                    ? `<em>(${escapeHtml(item.brand)})</em>`
+                    : ''
+                }
+            </div>
+        `,
+
+        buttons: [
+
+            {
+                label: 'View',
+                className:
+                    'btn btn-sm btn-outline-primary',
+
+                onClick: item =>
+                    openSearchFood(item.id)
+            },
+
+            {
+                label: 'Edit',
+                className:
+                    'btn btn-sm btn-outline-success',
+
+                onClick: item =>
+                    editSearchFood(item.id)
+            },
+
+            {
+                label: 'Delete',
+                className:
+                    'btn btn-sm btn-outline-danger',
+
+                onClick: item =>
+                    deleteEntityByType("foods", item.id)
+            }
+        ]
+    });
+}
+
+
+function renderMeals(data) {
+
+    renderSearchResults({
+
+        ...data,
+
+        type: 'meals',
+
+        createButton: `
+            <button
+                class="btn btn-sm btn-success mt-2"
+                onclick="openCreateMealPrepModal()"
+            >
+                Create Meal
+            </button>
+        `,
+        
+        itemRenderer: item => `
+            <div>
+                <strong>
+                    ${escapeHtml(item.name)}
+                </strong>
+                <em>
+                    Quantity: ${item.item_count}
+                </em>
+            </div>
+        `,
+
+        buttons: [
+
+            {
+                label: 'View',
+                className:
+                    'btn btn-sm btn-outline-primary',
+
+                onClick: item =>
+                    alert("Meal details view not implemented yet.")
+                    //openSearchMeal(item.id)
+            },
+
+            {
+                label: 'Edit',
+                className:
+                    'btn btn-sm btn-outline-success',
+
+                onClick: item =>
+                    editSearchMeal(item.id)
+            },
+
+            {
+                label: 'Delete',
+                className:
+                    'btn btn-sm btn-outline-danger',
+
+                onClick: item =>
+                    deleteEntityByType("meals", item.id)
+            }
+        ]
+    });
+}
+
+
+function renderDrinks(data) {
+
+    renderSearchResults({
+
+        ...data,
+
+        type: 'drinks',
+
+        createButton: `
+            <button
+                class="btn btn-sm btn-success mt-2"
+                onclick="openCreateDrinkModal()"
+            >
+                Create Drink
+            </button>
+        `,
+
+        itemRenderer: item => `
+            <div>
+                <strong>
+                    ${escapeHtml(item.name)}
+                </strong>
+            </div>
+        `,
+
+        buttons: [
+
+            {
+                label: 'View',
+                className:
+                    'btn btn-sm btn-outline-primary',
+
+                onClick: item =>
+                    alert("Drink details view not implemented yet.")
+                    //openSearchDrink(item.id)
+            },
+
+            {
+                label: 'Edit',
+                className:
+                    'btn btn-sm btn-outline-success',
+
+                onClick: item =>
+                    editSearchDrink(item.id)
+            },
+
+            {
+                label: 'Delete',
+                className:
+                    'btn btn-sm btn-outline-danger',
+
+                onClick: item =>
+                    deleteEntityByType("drinks", item.id)
+            }
+        ]
+    });
+}
+
+
+function renderDrinkLists(data) {
+
+    renderSearchResults({
+
+        ...data,
+
+        type: 'drink lists',
+
+        createButton: `
+            <button
+                class="btn btn-sm btn-success mt-2"
+                onclick="openCreateDrinkListModal()"
+            >
+                Create Drink List
+            </button>
+        `,
+
+        itemRenderer: item => `
+            <div>
+                <strong>
+                    ${escapeHtml(item.name)}
+                </strong>
+                <em>
+                    Quantity: ${item.item_count}
+                </em>
+            </div>
+        `,
+
+        buttons: [
+
+            {
+                label: 'View',
+                className:
+                    'btn btn-sm btn-outline-primary',
+
+                onClick: item =>
+                    alert("Drink list details view not implemented yet.")
+                    //openDrinkList(item.id)
+            },
+
+            {
+                label: 'Edit',
+                className:
+                    'btn btn-sm btn-outline-success',
+
+                onClick: item =>
+                    editSearchDrinkList(item.id)
+            },
+
+            {
+                label: 'Delete',
+                className:
+                    'btn btn-sm btn-outline-danger',
+
+                onClick: item =>
+                    deleteEntityByType("drink lists", item.id)
+            }
+        ]
+    });
+}
+
+
 
 function openSearchFood(foodId) {
     const select = document.getElementById('foodSelect');
@@ -1139,10 +2268,10 @@ async function showFoodDetailsModal(foodId) {
 
         if (macroData && macroData.macros) {
             html += '<div class="border p-3 rounded bg-light">';
+            html += `<p><strong>Calories:</strong> ${escapeHtml(String(macroData.macros.calories))} kcal</p>`;
             html += `<p><strong>Protein:</strong> ${escapeHtml(String(macroData.macros.protein))}g</p>`;
             html += `<p><strong>Carbs:</strong> ${escapeHtml(String(macroData.macros.carbs))}g</p>`;
             html += `<p><strong>Fat:</strong> ${escapeHtml(String(macroData.macros.fat))}g</p>`;
-            html += `<p><strong>Calories:</strong> ${escapeHtml(String(macroData.macros.calories))} kcal</p>`;
             html += '</div>';
         }
 
@@ -1291,10 +2420,10 @@ async function showMealDetailsModal(mealId) {
 
         if (data.totals) {
             html += '<div class="border p-3 rounded bg-light">';
+            html += `<p><strong>Total Calories:</strong> ${escapeHtml(String(data.totals.calories))}</p>`;
             html += `<p><strong>Total Protein:</strong> ${escapeHtml(String(data.totals.protein))}g</p>`;
             html += `<p><strong>Total Carbs:</strong> ${escapeHtml(String(data.totals.carbs))}g</p>`;
             html += `<p><strong>Total Fat:</strong> ${escapeHtml(String(data.totals.fat))}g</p>`;
-            html += `<p><strong>Total Calories:</strong> ${escapeHtml(String(data.totals.calories))}</p>`;
             if (data.totals.price !== undefined && data.totals.price !== null) {
                 html += `<p><strong>Estimated Price:</strong> ${escapeHtml(String(data.totals.price))} DKK</p>`;
             }
@@ -1308,43 +2437,6 @@ async function showMealDetailsModal(mealId) {
     }
 }
 
-function editSearchFood(foodId) {
-    const food = foods.find(f => String(f.id) === String(foodId));
-    if (!food) return;
-    const name = prompt('Food name', food.name);
-    if (name === null) return;
-    fetch(`${API_URL}/foods/${foodId}`, {
-        method: 'PUT', headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({name: name.trim(), brand: food.brand || null, price: food.price})
-    }).then(async response => {
-        if (response.ok) {
-            await loadFoods();
-            alert('Food updated.');
-        } else {
-            const error = await response.json().catch(() => ({}));
-            alert('Unable to update food: ' + (error.detail || response.statusText));
-        }
-    });
-}
-
-function editSearchMeal(mealId) {
-    const meal = meals.find(m => String(m.id) === String(mealId));
-    if (!meal) return;
-    const name = prompt('Meal prep name', meal.name);
-    if (name === null) return;
-    fetch(`${API_URL}/meals/${mealId}`, {
-        method: 'PUT', headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({name: name.trim()})
-    }).then(async response => {
-        if (response.ok) {
-            await loadMeals();
-            alert('Meal prep updated.');
-        } else {
-            const error = await response.json().catch(() => ({}));
-            alert('Unable to update meal prep: ' + (error.detail || response.statusText));
-        }
-    });
-}
 
 async function editMealItem(mealId, itemId, currentGrams) {
     const gramsInput = prompt('Enter new grams amount', String(currentGrams));
@@ -1380,11 +2472,19 @@ async function deleteMealItem(mealId, itemId) {
 }
 
 function openCreateFoodModal() {
-    showModalById('modalAddFood');
+    showModalById('modalCreateFood');
 }
 
 function openCreateMealPrepModal() {
     showModalById('modalCreateMealPrep');
+}
+
+function openCreateDrinkModal() {
+    showModalById('modalCreateDrink');
+}
+
+function openCreateDrinkListModal() {
+    showModalById('modalCreateDrinkList');
 }
 
 function openAddMealItemModal() {
@@ -1724,26 +2824,7 @@ async function saveFood(foodId) {
     }
 }
 
-async function deleteFood(foodId) {
-    if (!confirm("Delete this food item?")) {
-        return;
-    }
 
-    const response = await fetch(`${API_URL}/foods/${foodId}`, {
-        method: "DELETE"
-    });
-
-    const result = await response.json().catch(() => ({}));
-    if (response.ok) {
-        loadFoods();
-        const foodDetails = document.getElementById("foodDetails");
-        if (foodDetails) {
-            foodDetails.innerHTML = "";
-        }
-    } else {
-        alert("Error deleting food: " + (result.detail || JSON.stringify(result)));
-    }
-}
 
 // Food details functions
 async function loadFoodDetails() {
@@ -2098,26 +3179,6 @@ async function saveMeal(mealId) {
     }
 }
 
-async function deleteMeal(mealId) {
-    if (!confirm("Delete this meal?")) {
-        return;
-    }
-
-    const response = await fetch(`${API_URL}/meals/${mealId}`, {
-        method: "DELETE"
-    });
-
-    const result = await response.json().catch(() => ({}));
-    if (response.ok) {
-        loadMeals();
-        const mealDetails = document.getElementById("mealDetails");
-        if (mealDetails) {
-            mealDetails.innerHTML = "";
-        }
-    } else {
-        alert("Error deleting meal: " + (result.detail || JSON.stringify(result)));
-    }
-}
 
 // Barcode scanning functions
 function scanBarcode() {
@@ -2619,6 +3680,12 @@ function renderTodaysIntake(serverData = null) {
 
         const ctx = chartCanvas.getContext('2d');
         if (!ctx) return;
+        
+        // Debugging
+        console.log("CANVAS:", chartCanvas);
+        console.log("CTX:", chartCanvas?.getContext?.("2d"));
+        console.log("DATA LABELS:", labels);
+        console.log("DATA VALUES:", data);
 
         intakeChart = new Chart(ctx, {
             type: 'pie',

@@ -11,8 +11,8 @@ from app.models.meal_item import MealItem
 # New models
 from app.models.drink import Drink
 from app.models.drink_ingredient import DrinkIngredient
-from app.models.drink_prep import DrinkPrep
-from app.models.drink_prep_item import DrinkPrepItem
+from app.models.drink_list import DrinkList
+from app.models.drink_list_item import DrinkListItem
 from app.models.garnish import Garnish
 from app.models.intake_entry import IntakeEntry
 
@@ -153,18 +153,18 @@ def seed_dummy_data():
 	session.add_all([di1, di2])
 	session.commit()
 
-	# Create a prep for 10 drinks and the aggregated required amounts
-	prep = DrinkPrep(drink_id=screw.id, quantity=10)
-	session.add(prep)
+	# Create a list for 10 drinks and the aggregated required amounts
+	list = DrinkList(name="Screwdriver Batch")
+	session.add(list)
 	session.commit()
 
-	# For each ingredient, create prep items (amount * quantity)
-	prep_items = []
+	# For each ingredient, create list items (amount * quantity)
+	list_items = []
 	for di in [di1, di2]:
-		prep_items.append(
-			DrinkPrepItem(prep_id=prep.id, food_id=di.food_id, required_amount=di.amount * prep.quantity, unit=di.unit)
+		list_items.append(
+			DrinkListItem(list_id=list.id, drink_id=di.drink_id, quantity=10)
 		)
-	session.add_all(prep_items)
+	session.add_all(list_items)
 	session.commit()
 
 	# Add a simple meal with a single bread item (100g)
