@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, ForeignKey, Float
+from sqlalchemy import Column, Integer, ForeignKey, Float, String
 from app.database.db import Base
 
 
@@ -10,7 +10,9 @@ class MealItem(Base):
     meal_id = Column(Integer, ForeignKey("meals.id"), nullable=False)
     food_id = Column(Integer, ForeignKey("foods.id"), nullable=False)
 
-    grams = Column(Float, nullable=False)
+    # Amount of the food item used in this meal (units indicated by `unit`, e.g. 'g' or 'ml')
+    amount = Column(Float, nullable=False)
+    unit = Column(String, default="g")
 
     def __repr__(self):
-        return f"<MealItem(meal_id={self.meal_id}, food_id={self.food_id}, grams={self.grams})>"
+        return f"<MealItem(meal_id={self.meal_id}, food_id={self.food_id}, amount={self.amount}{self.unit})>"

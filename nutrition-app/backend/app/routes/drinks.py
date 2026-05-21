@@ -1,0 +1,293 @@
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import func
+from sqlalchemy.orm import Session, joinedload
+
+from app.database.session import get_db
+from app.models.drink import Drink
+from app.models.drink_ingredient import DrinkIngredient
+from app.models.drink_list import DrinkList
+from app.models.drink_list_item import DrinkListItem
+from app.models.food import Food
+from app.schemas.drink_schema import (
+    DrinkCreate,
+    DrinkResponse,
+    DrinkDetailResponse,
+    DrinkIngredientCreate,
+    DrinkIngredientResponse,
+    DrinkListCreate,
+    DrinkListResponse,
+    DrinkListDetailResponse,
+    DrinkListItemCreate,
+    DrinkListItemResponse,
+)
+
+router = APIRouter(tags=["Drinks"])
+
+# Create a new drink
+@router.post("/", response_model=DrinkResponse)
+def create_drink(data: DrinkCreate, db: Session = Depends(get_db)):
+    existing = db.query(Drink).filter(func.lower(Drink.name) == data.name.lower()).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Drink already exists")
+
+    drink = Drink(name=data.name)
+    db.add(drink)
+    db.commit()
+    db.refresh(drink)
+
+    return drink
+
+
+# Update a drink's name
+@router.put("/{drink_id}", response_model=DrinkResponse)
+def update_drink(drink_id: int, data: DrinkCreate, db: Session = Depends(get_db)):
+    drink = db.query(Drink).filter(Drink.id == drink_id).first()
+    if not drink:
+        raise HTTPException(status_code=404, detail="Drink not found")
+
+    existing = db.query(Drink).filter(func.lower(Drink.name) == data.name.lower()).first()
+    if existing and existing.id != drink_id:
+        raise HTTPException(status_code=400, detail="Drink already exists")
+
+    drink.name = data.name
+    db.commit()
+    db.refresh(drink)
+
+    return drink
+
+
+# Delete a drink
+@router.delete("/{drink_id}")
+def delete_drink(drink_id: int, db: Session = Depends(get_db)):
+    drink = db.query(Drink).filter(Drink.id == drink_id).first()
+    if not drink:
+        raise HTTPException(status_code=404, detail="Drink not found")
+
+    db.query(DrinkIngredient).filter(DrinkIngredient.drink_id == drink_id).delete()
+    db.delete(drink)
+    db.commit()
+
+    return {"detail": f"Drink deleted {drink_id}"}
+
+
+# Get all drinks
+@router.get("/", response_model=list[DrinkResponse])
+def get_drinks(db: Session = Depends(get_db)):
+    return db.query(Drink).all()
+
+
+# Get drink details with ingredients
+@router.get("/drinks/{drink_id}", response_model=DrinkDetailResponse)
+def get_drink(drink_id: int, db: Session = Depends(get_db)):
+    drink = db.query(Drink).filter(Drink.id == drink_id).first()
+    if not drink:
+        raise HTTPException(status_code=404, detail="Drink not found")
+
+    ingredients = (
+        db.query(DrinkIngredient)
+        .options(joinedload(DrinkIngredient.food))
+        .filter(DrinkIngredient.drink_id == drink_id)
+        .all()
+    )
+    return {
+        "id": drink.id,
+        "name": drink.name,
+        "ingredients": ingredients,
+    }
+
+
+# Add an ingredient to a drink
+@router.post("/{drink_id}/ingredients", response_model=DrinkIngredientResponse)
+def add_drink_ingredient(drink_id: int, data: DrinkIngredientCreate, db: Session = Depends(get_db)):
+    drink = db.query(Drink).filter(Drink.id == drink_id).first()
+    if not drink:
+        raise HTTPException(status_code=404, detail="Drink not found")
+
+    food = db.query(Food).filter(Food.id == data.food_id).first()
+    if not food:
+        raise HTTPException(status_code=404, detail="Food not found")
+
+    ingredient = DrinkIngredient(
+        drink_id=drink_id,
+        food_id=data.food_id,
+        amount=data.amount,
+        unit=data.unit,
+    )
+    db.add(ingredient)
+    db.commit()
+    db.refresh(ingredient)
+
+    return ingredient
+
+
+# Get all ingredients for a drink
+@router.get("/{drink_id}/ingredients", response_model=list[DrinkIngredientResponse])
+def get_drink_ingredients(drink_id: int, db: Session = Depends(get_db)):
+    drink = db.query(Drink).filter(Drink.id == drink_id).first()
+    if not drink:
+        raise HTTPException(status_code=404, detail="Drink not found")
+
+    return db.query(DrinkIngredient).filter(DrinkIngredient.drink_id == drink_id).all()
+
+
+# Create a new drink list
+@router.post("/lists", response_model=DrinkListResponse)
+def create_drink_list(data: DrinkListCreate, db: Session = Depends(get_db)):
+    existing = db.query(DrinkList).filter(func.lower(DrinkList.name) == data.name.lower()).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="List already exists")
+
+    drink_list = DrinkList(name=data.name)
+    db.add(drink_list)
+    db.commit()
+    db.refresh(drink_list)
+
+    return drink_list
+
+
+# Get all drink lists with item counts
+@router.get("/lists")
+def get_drink_lists(db: Session = Depends(get_db)):
+
+    results = db.query(
+        DrinkList.id,
+        DrinkList.name,
+        func.count(DrinkListItem.id).label("item_count")
+    ).outerjoin(
+        DrinkListItem,
+        DrinkListItem.list_id == DrinkList.id
+    ).group_by(
+        DrinkList.id
+    ).all()
+
+    return [
+        {
+            "id": r.id,
+            "name": r.name,
+            "item_count": r.item_count
+        }
+        for r in results
+    ]
+
+
+# Get details of a drink list with all items and their ingredients
+@router.get("/lists/{list_id}", response_model=DrinkListDetailResponse)
+def get_drink_list(list_id: int, db: Session = Depends(get_db)):
+
+    drink_list = (
+        db.query(DrinkList)
+        .options(
+            joinedload(DrinkList.items)
+            .joinedload(DrinkListItem.drink)
+            .joinedload(Drink.ingredients)
+            .joinedload(DrinkIngredient.food)
+        )
+        .filter(DrinkList.id == list_id)
+        .first()
+    )
+
+    if not drink_list:
+        raise HTTPException(status_code=404, detail="Drink list not found")
+
+    return {
+        "id": drink_list.id,
+        "name": drink_list.name,
+        "items": drink_list.items 
+    }
+
+
+# Update a drink list's name
+@router.put("/lists/{list_id}", response_model=DrinkListResponse)
+def update_drink_list(list_id: int, data: DrinkListCreate, db: Session = Depends(get_db)):
+    drink_list = db.query(DrinkList).filter(DrinkList.id == list_id).first()
+    if not drink_list:
+        raise HTTPException(status_code=404, detail="Drink list not found")
+
+    existing = db.query(DrinkList).filter(func.lower(DrinkList.name) == data.name.lower()).first()
+    if existing and existing.id != list_id:
+        raise HTTPException(status_code=400, detail="Drink list already exists")
+
+    drink_list.name = data.name
+    db.commit()
+    db.refresh(drink_list)
+
+    return drink_list
+
+
+# Delete a drink list and its items
+@router.delete("/lists/{list_id}")
+def delete_drink_list(list_id: int, db: Session = Depends(get_db)):
+    drink_list = db.query(DrinkList).filter(DrinkList.id == list_id).first()
+    if not drink_list:
+        raise HTTPException(status_code=404, detail="Drink list not found")
+
+    db.query(DrinkListItem).filter(DrinkListItem.list_id == list_id).delete()
+    db.delete(drink_list)
+    db.commit()
+    return {"detail": f"Drink list deleted {list_id}"}
+
+
+# Add a drink to a drink list
+@router.post("/lists/{list_id}/items", response_model=DrinkListItemResponse)
+def add_drink_to_list(list_id: int, data: DrinkListItemCreate, db: Session = Depends(get_db)):
+    drink_list = db.query(DrinkList).filter(DrinkList.id == list_id).first()
+    if not drink_list:
+        raise HTTPException(status_code=404, detail="Drink list not found")
+
+    drink = db.query(Drink).filter(Drink.id == data.drink_id).first()
+    if not drink:
+        raise HTTPException(status_code=404, detail="Drink not found")
+
+    item = DrinkListItem(
+        list_id=list_id,
+        drink_id=data.drink_id,
+        quantity=data.quantity
+    )
+    db.add(item)
+    db.commit()
+    db.refresh(item)
+
+    return item
+
+
+# Update a drink list item (change drink)
+@router.put("/lists/{list_id}/items/{item_id}", response_model=DrinkListItemResponse)
+def update_drink_list_item(list_id: int, item_id: int, data: DrinkListItemCreate, db: Session = Depends(get_db)):
+    drink_list = db.query(DrinkList).filter(DrinkList.id == list_id).first()
+    if not drink_list:
+        raise HTTPException(status_code=404, detail="Drink list not found")
+
+    item = db.query(DrinkListItem).filter(DrinkListItem.id == item_id, DrinkListItem.list_id == list_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="Drink list item not found")
+
+    drink = db.query(Drink).filter(Drink.id == data.drink_id).first()
+    if not drink:
+        raise HTTPException(status_code=404, detail="Drink not found")
+
+    item.drink_id = data.drink_id
+    db.commit()
+    db.refresh(item)
+
+    return item
+
+
+# Delete a drink list item
+@router.delete("/lists/{list_id}/items/{item_id}")
+def delete_drink_list_item(list_id: int, item_id: int, db: Session = Depends(get_db)):
+    drink_list = db.query(DrinkList).filter(DrinkList.id == list_id).first()
+    if not drink_list:
+        raise HTTPException(status_code=404, detail="Drink list not found")
+
+    item = db.query(DrinkListItem).filter(
+        DrinkListItem.id == item_id, 
+        DrinkListItem.list_id == list_id
+        ).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="Drink list item not found")
+    
+    db.delete(item)
+    db.commit()
+
+    return {"detail": f"Drink list item deleted {item.id} from list {list_id}"}
+

@@ -16,7 +16,7 @@ from app.schemas.food_schema import (
 )
 from app.utils.energy_constants import calculate_energy_from_macros
 
-router = APIRouter(prefix="/foods", tags=["Foods"])
+router = APIRouter(tags=["Foods"])
 
 
 
@@ -37,7 +37,10 @@ def create_food(
 
     food = Food(
         name=food_data.name,
-        brand=food_data.brand
+        brand=food_data.brand,
+        price=food_data.price,
+        base_amount=food_data.base_amount,
+        base_unit=food_data.base_unit,
     )
 
     db.add(food)
@@ -47,7 +50,8 @@ def create_food(
     return {
         "id": food.id,
         "name": food.name,
-        "brand": food.brand
+        "brand": food.brand,
+        "price": food.price
     }
 
 
@@ -80,6 +84,9 @@ def update_food(
 
     food.name = food_data.name
     food.brand = food_data.brand
+    food.price = food_data.price
+    food.base_amount = food_data.base_amount
+    food.base_unit = food_data.base_unit
     db.commit()
     db.refresh(food)
 

@@ -1,3 +1,2 @@
-
-cd nutrition-app/frontend 
+cd .\Nutrition-app\nutrition-app\frontend\
 python -m http.server 3000

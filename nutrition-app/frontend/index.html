@@ -1,80 +1,414 @@
 <!DOCTYPE html>
-<html>
-<head>
-    <title>Nutrition Tracker App</title>
-    <link rel="stylesheet" href="style.css">
-</head>
-<body>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Nutrition Tracker App</title>
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+        <link rel="stylesheet" href="style.css">
+    </head>
+    <body>
+        <div class="container-fluid">
+            <div class="row">
+                <nav id="sidebar" class="col-12 col-md-3 col-lg-2 d-none d-md-block bg-light sidebar collapse">
+                    <div class="position-sticky pt-3 sidebar-sticky">
+                        <a class="d-flex align-items-center mb-3 mb-md-0 me-md-auto text-decoration-none ps-3" href="#" id="brand-btn" data-action="home">
+                            <div class="app-brand">N</div>
+                            <span class="app-title">Nutrition</span>
+                        </a>
+                        <ul class="nav flex-column mt-3">
+                            <li class="nav-item">
+                                <a class="nav-link" href="#home" id="home-btn" data-action="home">
+                                    <i class="bi bi-house-door-fill me-2"></i>
+                                    Home
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="#meal-dashboard" id="meal-dashboard-btn" data-action="meal-dashboard">
+                                    <i class="bi bi-speedometer2 me-2"></i>
+                                    Meal Dashboard
+                                </a>
+                            </li>
+                            <li class="nav-item mb-2">
+                                <a class="nav-link" href="#drink-dashboard" id="drink-dashboard-btn" data-action="drink-dashboard">
+                                    <i class="bi bi-cup-straw me-2"></i>
+                                    Drinks Dashboard
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="#" id="create-meal-prep-btn" data-action="create-meal-prep">
+                                    <i class="bi bi-plus-lg me-2"></i>
+                                    Create Meal Prep
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="#" id="create-drink-prep-btn" data-action="create-drink-prep">
+                                    <i class="bi bi-cup-straw me-2"></i>
+                                    Create Drink Prep
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="#" id="search-foods-btn" data-action="search-foods">
+                                    <i class="bi bi-search me-2"></i>
+                                    Search Foods
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="#" id="search-meals-btn" data-action="search-meals">
+                                    <i class="bi bi-search me-2"></i>
+                                    Search Meals
+                                </a>
+                            </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" href="#" id="search-drinks-btn" data-action="search-drinks">
+                                        <i class="bi bi-search me-2"></i>
+                                        Search Drinks
+                                    </a>
+                                </li>
+                        </ul>
 
-    <h1>Nutrition Tracker</h1>
+                        <div class="mt-3 ps-3">
+                            <button class="btn btn-outline-info w-100 mb-2 d-flex align-items-center justify-content-start" id="status-btn" data-action="status">
+                                <i class="bi bi-info-circle me-2"></i>
+                                System Status
+                            </button>
+                        </div>
 
-    <!-- Nutrients Section -->
-    <section id="nutrients-section">
-        <h2>Nutrients</h2>
-        <input type="text" id="nutrientName" placeholder="Nutrient name (e.g., Protein)">
-        <input type="text" id="nutrientUnit" placeholder="Unit (e.g., g)">
-        <button type="button" onclick="createNutrient()">Create Nutrient</button>
-        <button type="button" id="nutrient-edit-btn" onclick="toggleNutrientEdit()">Edit Nutrients</button>
-        <ul id="nutrientList"></ul>
-    </section>
+                        <div class="dropdown border-top mt-3 pt-3 ps-3">
+                            <a href="#" class="d-flex align-items-center text-decoration-none dropdown-toggle" id="user-btn" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="bi bi-person-circle fs-3 me-2"></i>
+                                <strong class="user-label">Profile</strong>
+                            </a>
+                            <ul class="dropdown-menu" aria-labelledby="user-btn">
+                                <li><a class="dropdown-item" href="#" id="account-action" data-action="account">Account(W.I.P)</a></li>
+                                <li><a class="dropdown-item" href="#" id="settings-action" data-action="settings">Settings(W.I.P)</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </nav>
 
-    <!-- Foods Section -->
-    <section id="foods-section">
-        <h2>Foods</h2>
-        <input type="text" id="foodName" placeholder="Food name">
-        <input type="text" id="foodBrand" placeholder="Brand (optional)">
-        <button type="button" onclick="createFood()">Create Food</button>
-        <button type="button" onclick="scanBarcode()">Scan Barcode</button>
-        <button type="button" id="food-edit-btn" onclick="toggleFoodEdit()">Edit Foods</button>
-        <div id="barcode-scanner" style="display: none;">
-            <div id="interactive" class="viewport"></div>
-            <button onclick="stopScanning()">Stop Scanning</button>
+                <div class="offcanvas offcanvas-start d-md-none" tabindex="-1" id="mobileMenu" aria-labelledby="mobileMenuLabel">
+                    <div class="offcanvas-header">
+                        <div class="d-flex align-items-center">
+                            <div class="app-brand">N</div>
+                            <div class="ms-2">
+                                <h5 class="offcanvas-title mb-0" id="mobileMenuLabel">Nutrition</h5>
+                            </div>
+                        </div>
+                        <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+                    </div>
+                    <div class="offcanvas-body p-0">
+                        <nav class="bg-light h-100">
+                            <ul class="nav flex-column p-3">
+                                <li class="nav-item mb-2"><a class="nav-link" href="#home" data-action="home"><i class="bi bi-house-door-fill me-2"></i>Home</a></li>
+                                <li class="nav-item mb-2"><a class="nav-link" href="#meal-dashboard" data-action="dashboard"><i class="bi bi-speedometer2 me-2"></i>Dashboard</a></li>
+                                <li class="nav-item mb-2"><a class="nav-link" href="#drink-dashboard" data-action="drink-dashboard"><i class="bi bi-cup-straw me-2"></i>Drinks Dashboard</a></li>
+                                <li class="nav-item mb-2"><a class="nav-link" href="#" data-action="create-meal-prep"><i class="bi bi-plus-lg me-2"></i>Create Meal Prep</a></li>
+                                <li class="nav-item mb-2"><a class="nav-link" href="#" data-action="create-food"><i class="bi bi-plus-lg me-2"></i>Create Food</a></li>
+                                <li class="nav-item mb-2"><a class="nav-link" href="#" data-action="create-nutrient"><i class="bi bi-plus-lg me-2"></i>Create Nutrient</a></li>
+                                <li class="nav-item mb-2"><a class="nav-link" href="#" data-action="create-drink"><i class="bi bi-plus-lg me-2"></i>Create Drink</a></li>
+                                <li class="nav-item mb-2"><a class="nav-link" href="#" data-action="create-drink-list"><i class="bi bi-plus-lg me-2"></i>Create Drink List</a></li>
+                                <li class="nav-item mb-2"><a class="nav-link" href="#" data-action="search-foods"><i class="bi bi-search me-2"></i>Search Foods</a></li>
+                                <li class="nav-item mb-2"><a class="nav-link" href="#" data-action="search-meals"><i class="bi bi-search me-2"></i>Search Meals</a></li>
+                                <li class="nav-item mb-2"><a class="nav-link" href="#" data-action="search-drinks"><i class="bi bi-search me-2"></i>Search Drinks</a></li>
+                                <li class="nav-item mb-2"><button class="btn btn-outline-info w-100 text-start" type="button" data-action="status"><i class="bi bi-info-circle me-2"></i>System Status</button></li>
+                                <li class="nav-item border-top mt-3 pt-3"><a class="nav-link" href="#" data-action="account"><i class="bi bi-person-circle me-2"></i>Account(W.I.P)</a></li>
+                                <li class="nav-item"><a class="nav-link" href="#" data-action="settings"><i class="bi bi-gear me-2"></i>Settings(W.I.P)</a></li>
+                            </ul>
+                        </nav>
+                    </div>
+                </div>
+
+                <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 py-4">
+                    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
+                        <button class="btn btn-outline-secondary d-md-none me-2" type="button" data-bs-toggle="offcanvas" data-bs-target="#mobileMenu" aria-controls="mobileMenu" aria-expanded="false" aria-label="Toggle menu">
+                            <i class="bi bi-list"></i>
+                        </button>
+                        <h1 class="h2">Nutrition Tracker</h1>
+                    </div>
+
+                    <div id="appOutputSection" class="mb-4"></div>
+
+                    <!-- Add modals -->
+                    <div class="modal fade" id="modalCreateNutrient" tabindex="-1" aria-hidden="true">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title">Add Nutrient</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <div class="mb-3">
+                                        <label class="form-label">Name</label>
+                                        <input id="modalNutrientName" class="form-control" placeholder="Nutrient name (e.g., Protein)">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Unit</label>
+                                        <input id="modalNutrientUnit" class="form-control" placeholder="Unit (e.g., g)">
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                    <button type="button" class="btn btn-primary" onclick="submitAddNutrient()">Create</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="modal fade" id="modalCreateFood" tabindex="-1" aria-hidden="true">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title">Add Food</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <div class="mb-3">
+                                        <label class="form-label">Name</label>
+                                        <input id="modalFoodName" class="form-control" placeholder="Food name (e.g., Apple)">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Brand (optional)</label>
+                                        <input id="modalFoodBrand" class="form-control" placeholder="Brand (optional, e.g., Fresh Farms)">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Price</label>
+                                        <input id="modalFoodPrice" type="number" step="0.01" class="form-control" placeholder="Price (e.g., 1.99)">
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                    <button type="button" class="btn btn-primary" onclick="submitAddFood()">Create</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="modal fade" id="modalCreateMealPrep" tabindex="-1" aria-hidden="true">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title">Create Meal Prep</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <div class="mb-3">
+                                        <label class="form-label">Meal prep name</label>
+                                        <input id="modalMealPrepName" class="form-control" placeholder="Meal prep name (e.g., Lunch Batch)">
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                    <button type="button" class="btn btn-primary" onclick="submitAddMealPrep()">Create</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="modal fade" id="modalCreateDrink" tabindex="-1" aria-hidden="true">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title">Create Drink</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <div class="mb-3">
+                                        <label class="form-label">Drink name</label>
+                                        <input id="modalDrinkName" class="form-control" placeholder="Drink name (e.g., Amaretto sour)">
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                    <button type="button" class="btn btn-primary" onclick="submitAddDrink()">Create</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="modal fade" id="modalCreateDrinkList" tabindex="-1" aria-hidden="true">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title">Create Drink List</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <div class="mb-3">
+                                        <label class="form-label">Drink list name</label>
+                                        <input id="modalDrinkListName" class="form-control" placeholder="Drink list name (e.g., Weekend Cocktails)">
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                    <button type="button" class="btn btn-primary" onclick="submitAddDrinkList()">Create</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="modal fade" id="modalSearchDatabase" tabindex="-1" aria-hidden="true">
+                        <div class="modal-dialog modal-lg">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title">Search database</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <div class="d-flex gap-2 mb-3 flex-column flex-md-row align-items-stretch">
+                                    <div id="databaseSearchTypeButtons" class="btn-group" role="group">
+                                        <button type="button" class="btn btn-outline-secondary active" data-search-type="foods" onclick="setDatabaseSearchType('foods')">
+                                            <i class="bi bi-basket3-fill me-1"></i> Foods
+                                        </button>
+                                        <button type="button" class="btn btn-outline-secondary" data-search-type="meals" onclick="setDatabaseSearchType('meals')">
+                                            <i class="bi bi-egg-fried me-1"></i> Meals
+                                        </button>
+                                        <button type="button" class="btn btn-outline-secondary" data-search-type="drinks" onclick="setDatabaseSearchType('drinks')">
+                                            <i class="bi bi-cup-straw me-1"></i> Drinks
+                                        </button>
+                                        <button type="button" class="btn btn-outline-secondary" data-search-type="drink lists" onclick="setDatabaseSearchType('drink lists')">
+                                            <i class="bi bi-list-check me-1"></i> Drink Lists
+                                        </button>
+                                    </div>
+                                    <input id="databaseSearchQuery" class="form-control" placeholder="Search term">
+                                    <div class="d-flex gap-2 flex-wrap">
+                                        <button class="btn btn-primary" type="button" onclick="doSearchDatabase()">Search</button>
+                                        <button class="btn btn-success" id="databaseSearchCreateBtn" type="button" onclick="openCreateFromSearch()">Create Food</button>
+                                    </div>
+                                </div>
+                                    <div id="databaseSearchResults"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="modal fade" id="modalAddMealItem" tabindex="-1" aria-hidden="true">
+                        <div class="modal-dialog modal-lg">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title">Add Food Item to Meal Prep</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <div class="d-flex gap-2 mb-3 flex-wrap">
+                                        <input id="mealItemSearchQuery" class="form-control" placeholder="Search foods to add">
+                                        <button class="btn btn-primary" type="button" onclick="searchMealItemFoods()">Search</button>
+                                    </div>
+                                    <div id="mealItemSearchResults" class="mb-3"></div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Selected food</label>
+                                        <input id="mealItemFoodName" class="form-control" readonly>
+                                        <input id="mealItemFoodId" type="hidden">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Grams</label>
+                                        <input id="mealItemGrams" type="number" step="1" class="form-control" placeholder="Enter grams to add">
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                    <button type="button" class="btn btn-primary" onclick="addMealItemToSelectedMeal()">Add Item</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="modal fade" id="modalFoodDetails" tabindex="-1" aria-hidden="true">
+                        <div class="modal-dialog modal-lg">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title">Food Details</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body" id="modalFoodDetailsContent"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="modal fade" id="modalMealDetails" tabindex="-1" aria-hidden="true">
+                        <div class="modal-dialog modal-xl">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title">Meal Details</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body" id="modalMealDetailsContent"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <section id="nutrients-section" class="mt-4">
+                            <h2>Nutrients</h2>
+                            <div class="d-flex gap-2 flex-wrap">
+                                    <input class="form-control" type="text" id="nutrientName" placeholder="Nutrient name (e.g., Protein)" style="max-width:320px">
+                                    <input class="form-control" type="text" id="nutrientUnit" placeholder="Unit (e.g., g)" style="max-width:120px">
+                                    <button class="btn btn-success" type="button" onclick="createNutrient()">Create Nutrient</button>
+                                    <button class="btn btn-outline-secondary" type="button" id="nutrient-edit-btn" onclick="toggleNutrientEdit()">Edit Nutrients</button>
+                            </div>
+                            <ul id="nutrientList" class="mt-3 list-unstyled"></ul>
+                    </section>
+
+                    <section id="foods-section" class="mt-4">
+                            <h2>Foods</h2>
+                            <div class="d-flex gap-2 flex-wrap">
+                                    <input class="form-control" id="foodName" placeholder="Food name" style="max-width:240px">
+                                    <input class="form-control" id="foodBrand" placeholder="Brand (optional)" style="max-width:200px">
+                                    <input class="form-control" id="foodPrice" type="number" placeholder="Price" step="0.01" style="max-width:140px">
+                                    <button class="btn btn-success" onclick="createFood()">Create Food</button>
+                                    <button class="btn btn-outline-secondary" onclick="scanBarcode()">Scan Barcode</button>
+                                    <button class="btn btn-outline-secondary" id="food-edit-btn" onclick="toggleFoodEdit()">Edit Foods</button>
+                            </div>
+                            <div id="barcode-scanner" style="display:none;" class="mt-2">
+                                    <div id="interactive" class="viewport"></div>
+                                    <button class="btn btn-sm btn-outline-secondary mt-2" onclick="stopScanning()">Stop Scanning</button>
+                            </div>
+                            <h3 class="mt-3">Food List</h3>
+                            <ul id="foodList" class="list-unstyled"></ul>
+                    </section>
+
+                    <section id="meal-details-section" class="mt-4">
+                            <h2>Meal Prep</h2>
+                            <div class="d-flex gap-2 align-items-center flex-wrap">
+                                    <input class="form-control" id="mealName" placeholder="Meal prep name" style="max-width:260px">
+                                    <button class="btn btn-success" onclick="createMealPrep()">Create Meal Prep</button>
+                                    <button class="btn btn-outline-secondary" id="meal-edit-btn" onclick="toggleMealEdit()">Edit Meals</button>
+                            </div>
+                            <div class="d-flex gap-2 align-items-center mt-3 flex-wrap">
+                                    <select class="form-select" id="mealSelect" style="max-width:320px"></select>
+                                    <button class="btn btn-primary" onclick="loadMealDetails()">View Meal Prep</button>
+                                    <button class="btn btn-outline-secondary" onclick="openAddMealItemModal()">Add Food Item</button>
+                                    <button class="btn btn-outline-secondary" id="meal-details-edit-btn" onclick="toggleMealDetailsEdit()">Edit Meal Items</button>
+                            </div>
+                            <h3 class="mt-3">Meal Preps</h3>
+                            <ul id="mealList" class="list-unstyled"></ul>
+                            <div id="mealDetails"></div>
+                    </section>
+                </main>
+            </div>
         </div>
 
-        <h3>Food List</h3>
-        <ul id="foodList"></ul>
-    </section>
+        <div class="mobile-action-shell d-md-none">
+            <div class="mobile-action-bg"></div>
+            <div class="mobile-action-bar">
+                <button id="mobile-home-btn" class="btn btn-primary mobile-action-btn" type="button" data-action="home" title="Home">
+                    <i class="bi bi-house-door-fill"></i>
+                </button>
+                <button id="mobile-search-btn" class="btn btn-secondary mobile-action-btn" type="button" data-action="search-foods" title="Search">
+                    <i class="bi bi-search"></i>
+                </button>
+                <button id="mobile-create-btn" class="btn btn-success mobile-action-btn" type="button" data-action="create-meal-prep" title="Create">
+                    <i class="bi bi-plus-lg"></i>
+                </button>
+                <button id="mobile-status-btn" class="btn btn-info mobile-action-btn" type="button" data-action="status" title="Status">
+                    <i class="bi bi-info-circle"></i>
+                </button>
+            </div>
+        </div>
 
-    <!-- Food Details Section -->
-    <section id="food-details-section">
-        <h2>Food Details</h2>
-        <select id="foodSelect"></select>
-        <button onclick="loadFoodDetails()">Load Details</button>
-        <button type="button" id="food-details-edit-btn" onclick="toggleFoodDetailsEdit()">Edit Nutrients in Food</button>
-        <div id="foodDetails"></div>
-
-        <h3>Add Nutrient to Food</h3>
-        <select id="nutrientSelect"></select>
-        <input type="number" id="amountPer100g" placeholder="Amount per 100g" step="0.1">
-        <button onclick="addNutrientToFood()">Add Nutrient</button>
-    </section>
-
-    <!-- Meals Section -->
-    <section id="meals-section">
-        <h2>Meals</h2>
-        <input type="text" id="mealName" placeholder="Meal name">
-        <button onclick="createMeal()">Create Meal</button>
-        <button type="button" id="meal-edit-btn" onclick="toggleMealEdit()">Edit Meals</button>
-
-        <h3>Meal List</h3>
-        <ul id="mealList"></ul>
-    </section>
-
-    <!-- Meal Details Section -->
-    <section id="meal-details-section">
-        <h2>Meal Details</h2>
-        <select id="mealSelect"></select>
-        <button onclick="loadMealDetails()">Load Details</button>
-        <div id="mealDetails"></div>
-
-        <h3>Add Food to Meal</h3>
-        <select id="mealFoodSelect"></select>
-        <input type="number" id="foodGrams" placeholder="Grams" step="1">
-        <button onclick="addFoodToMeal()">Add Food</button>
-    </section>
-
-    <script src="app.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/quagga@0.12.1/dist/quagga.min.js"></script>
-
-</body>
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+        <script src="app.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/quagga@0.12.1/dist/quagga.min.js"></script>
+    </body>
 </html>
