@@ -659,15 +659,16 @@ function renderHomeOutput() {
                     <li> - Make add/remove consumed meals possible throgh prompts <strong><i>(W.I.P)</i></strong></li>
                     <li> - Quick add/remove consumed meals</li>
                     <li> - Quick add/remove drinks to list</li>
-                    <li> - Implement View buttons in search modal</li>
+                    <li> - Implement View buttons in all search modals</li>
                     <li> - Create the add ingredients to drink modal</li>
                     <li> - Create the add food to meal modal</li>
                     <li> - Update the modal for food details</li>
-                    <li> - Create the edit button when viewing a food/meal/drink/drink-list</li>
-                    <li> - Implement the edit buttons</li>
+                    <li> - Create the edit button when viewing a food/meal/drink/drink-list details</li>
+                    <li> - Implement the edit button for each search view</li>
                     <li> - Update database to have more data</li>
-                    <li> - Add personalized user profiles</li>
-                    <li> - Make settings options and buttons plus a way to save them</li>
+                    <li> - Fix 'todays intake' in regards to the manual meal entry</li>
+                    <li> - Make a new sidebar section for maintenance calculations</li>
+                    <li> - Make settings options / buttons and also a way to save the state</li>
                 </ul>
             </p>
         </div>
@@ -676,9 +677,9 @@ function renderHomeOutput() {
                     id="feedbackInput"
                     maxlength="200"
                     rows="3"
-                    placeholder="Have feedback or want to contribute?"
+                    placeholder="Have feedback or want to contribute? Type it here and press Enter..."
                     onfocus="this.placeholder='Type your feedback and press Enter...';"
-                    onblur="this.placeholder='Have feedback or want to contribute...';"
+                    onblur="this.placeholder='Have feedback or want to contribute?';"
                     onkeydown="if(event.key === 'Enter') submitFeedback();"
                     oninput="updateCount()">
             </textarea>
