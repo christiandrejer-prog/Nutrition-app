@@ -1,6 +1,6 @@
 const API_URL_OVERRIDE_KEY = "nutrition_app_api_url";
 // Default API URL (can be overridden by runtime-config.json or manual override)
-const DEFAULT_API_URL = "http://127.0.0.1:8000";
+const DEFAULT_API_URL = "https://nutrition-app-vxbz.onrender.com";
 let API_URL = DEFAULT_API_URL;
 let API_URL_SOURCE = "default";
 
