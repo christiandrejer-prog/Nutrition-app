@@ -91,6 +91,14 @@ def get_intake_entries(intake_date: date = Query(None), db: Session = Depends(ge
         .all()
     )
 
+@router.delete("/{entry_id}")
+def delete_intake_entry(entry_id: int, db: Session = Depends(get_db)):
+    entry = db.query(IntakeEntry).filter(IntakeEntry.id == entry_id).first()
+    if not entry:
+        raise HTTPException(status_code=404, detail="Intake entry not found")
+    db.delete(entry)
+    db.commit()
+    return {"detail": f"Intake entry deleted {entry_id}"}
 
 @router.get("/dates", response_model=list[IntakeDateResponse])
 def get_intake_dates(db: Session = Depends(get_db)):
