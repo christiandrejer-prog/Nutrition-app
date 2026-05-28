@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 from typing import Optional
 from pydantic import BaseModel, Field
 
@@ -15,6 +15,7 @@ class IntakeEntryCreate(BaseModel):
 class IntakeEntryResponse(BaseModel):
     id: int
     intake_date: date
+    created_at: datetime
     meal_id: Optional[int]
     description: Optional[str]
     protein: float

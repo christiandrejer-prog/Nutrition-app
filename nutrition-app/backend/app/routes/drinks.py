@@ -13,6 +13,7 @@ from app.schemas.drink_schema import (
     DrinkResponse,
     DrinkDetailResponse,
     DrinkIngredientCreate,
+    DrinkIngredientUpdate,
     DrinkIngredientResponse,
     DrinkListCreate,
     DrinkListResponse,
@@ -22,6 +23,24 @@ from app.schemas.drink_schema import (
 )
 
 router = APIRouter(tags=["Drinks"])
+
+
+def merge_duplicate_drink_list_items(list_id: int, db: Session) -> None:
+    items = db.query(DrinkListItem).filter(DrinkListItem.list_id == list_id).all()
+    by_drink = {}
+    changed = False
+
+    for item in items:
+        if item.drink_id not in by_drink:
+            by_drink[item.drink_id] = item
+            continue
+
+        by_drink[item.drink_id].quantity += item.quantity
+        db.delete(item)
+        changed = True
+
+    if changed:
+        db.commit()
 
 # Create a new drink
 @router.post("/", response_model=DrinkResponse)
@@ -77,7 +96,7 @@ def get_drinks(db: Session = Depends(get_db)):
 
 
 # Get drink details with ingredients
-@router.get("/drinks/{drink_id}", response_model=DrinkDetailResponse)
+@router.get("/details/{drink_id}", response_model=DrinkDetailResponse)
 def get_drink(drink_id: int, db: Session = Depends(get_db)):
     drink = db.query(Drink).filter(Drink.id == drink_id).first()
     if not drink:
@@ -106,6 +125,13 @@ def add_drink_ingredient(drink_id: int, data: DrinkIngredientCreate, db: Session
     food = db.query(Food).filter(Food.id == data.food_id).first()
     if not food:
         raise HTTPException(status_code=404, detail="Food not found")
+    
+    existing = db.query(DrinkIngredient).filter(
+        DrinkIngredient.drink_id == drink_id,
+        DrinkIngredient.food_id == data.food_id
+    ).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Ingredient already exists for this drink")
 
     ingredient = DrinkIngredient(
         drink_id=drink_id,
@@ -128,6 +154,47 @@ def get_drink_ingredients(drink_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Drink not found")
 
     return db.query(DrinkIngredient).filter(DrinkIngredient.drink_id == drink_id).all()
+
+
+@router.put("/{drink_id}/ingredients/{ingredient_id}", response_model=DrinkIngredientResponse)
+def update_drink_ingredient(
+    drink_id: int,
+    ingredient_id: int,
+    data: DrinkIngredientUpdate,
+    db: Session = Depends(get_db)
+):
+    ingredient = db.query(DrinkIngredient).filter(
+        DrinkIngredient.id == ingredient_id,
+        DrinkIngredient.drink_id == drink_id
+    ).first()
+    if not ingredient:
+        raise HTTPException(status_code=404, detail="Drink ingredient not found")
+
+    ingredient.amount = data.amount
+    ingredient.unit = data.unit
+    db.commit()
+    db.refresh(ingredient)
+
+    return ingredient
+
+
+@router.delete("/{drink_id}/ingredients/{ingredient_id}")
+def delete_drink_ingredient(
+    drink_id: int,
+    ingredient_id: int,
+    db: Session = Depends(get_db)
+):
+    ingredient = db.query(DrinkIngredient).filter(
+        DrinkIngredient.id == ingredient_id,
+        DrinkIngredient.drink_id == drink_id
+    ).first()
+    if not ingredient:
+        raise HTTPException(status_code=404, detail="Drink ingredient not found")
+
+    db.delete(ingredient)
+    db.commit()
+
+    return {"detail": f"Drink ingredient deleted {ingredient_id}"}
 
 
 # Create a new drink list
@@ -173,6 +240,7 @@ def get_drink_lists(db: Session = Depends(get_db)):
 # Get details of a drink list with all items and their ingredients
 @router.get("/lists/{list_id}", response_model=DrinkListDetailResponse)
 def get_drink_list(list_id: int, db: Session = Depends(get_db)):
+    merge_duplicate_drink_list_items(list_id, db)
 
     drink_list = (
         db.query(DrinkList)
@@ -238,12 +306,23 @@ def add_drink_to_list(list_id: int, data: DrinkListItemCreate, db: Session = Dep
     if not drink:
         raise HTTPException(status_code=404, detail="Drink not found")
 
-    item = DrinkListItem(
-        list_id=list_id,
-        drink_id=data.drink_id,
-        quantity=data.quantity
-    )
-    db.add(item)
+    merge_duplicate_drink_list_items(list_id, db)
+
+    item = db.query(DrinkListItem).filter(
+        DrinkListItem.list_id == list_id,
+        DrinkListItem.drink_id == data.drink_id
+    ).first()
+
+    if item:
+        item.quantity += data.quantity
+    else:
+        item = DrinkListItem(
+            list_id=list_id,
+            drink_id=data.drink_id,
+            quantity=data.quantity
+        )
+        db.add(item)
+
     db.commit()
     db.refresh(item)
 
@@ -265,7 +344,26 @@ def update_drink_list_item(list_id: int, item_id: int, data: DrinkListItemCreate
     if not drink:
         raise HTTPException(status_code=404, detail="Drink not found")
 
+    merge_duplicate_drink_list_items(list_id, db)
+
+    item = db.query(DrinkListItem).filter(DrinkListItem.id == item_id, DrinkListItem.list_id == list_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="Drink list item not found")
+
+    duplicate = db.query(DrinkListItem).filter(
+        DrinkListItem.id != item_id,
+        DrinkListItem.list_id == list_id,
+        DrinkListItem.drink_id == data.drink_id
+    ).first()
+    if duplicate:
+        duplicate.quantity += data.quantity
+        db.delete(item)
+        db.commit()
+        db.refresh(duplicate)
+        return duplicate
+
     item.drink_id = data.drink_id
+    item.quantity = data.quantity
     db.commit()
     db.refresh(item)
 
