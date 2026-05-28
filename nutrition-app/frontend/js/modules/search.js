@@ -10,16 +10,57 @@
 
 // Imports --- IN THE WORKS, DONT KNOW IF THIS IS NEEDED
 import { getApiUrl } from "../config.js";
+import {
+    buildSearchableText,
+    deleteEntityByType,
+    escapeHtml,
+    getDatabaseEndpoint
+} from "../utils.js";
+import { showModalById, showFoodDetailsModal } from "./modals.js";
+import { loadFoods } from "./foods.js";
+import { loadMeals, loadMealDetails, showMealDetailsModal } from "./meals.js";
+import { loadDrinks, loadDrinkLists, showDrinkDetailsModal, showDrinkListDetailsModal } from "./drinks.js";
+import { FoodsAPI } from "../api/foodsAPI.js";
+import { MealsAPI } from "../api/mealsAPI.js";
+import { DrinksAPI } from "../api/drinksAPI.js";
+import { closeAppModal, openFormModal } from "../ui/components/modal.js";
 
 // Exports --- IN THE WORKS, DONT KNOW IF THIS IS NEEDED
 
 
 
-function setDatabaseSearchType(type) {
+const databaseSearchState = {
+    type: "foods",
+    query: "",
+    page: 1,
+    pageSize: 10,
+    results: [],
+    mode: "browse",
+    lockedType: null,
+    selectLabel: "Select",
+    onSelect: null
+};
+
+let pendingSearchReturn = null;
+
+export function setDatabaseSearchType(type) {
+    if (
+        databaseSearchState.mode === "select" &&
+        databaseSearchState.lockedType &&
+        type !== databaseSearchState.lockedType
+    ) {
+        return;
+    }
+
     databaseSearchState.type = type;
     const buttons = document.querySelectorAll('#databaseSearchTypeButtons [data-search-type]');
     buttons.forEach(btn => {
         btn.classList.toggle('active', btn.dataset.searchType === type);
+        btn.disabled = Boolean(
+            databaseSearchState.mode === "select" &&
+            databaseSearchState.lockedType &&
+            btn.dataset.searchType !== databaseSearchState.lockedType
+        );
     });
     const createBtn = document.getElementById('databaseSearchCreateBtn');
     if (createBtn) {
@@ -29,21 +70,31 @@ function setDatabaseSearchType(type) {
 }
 
 
-export async function openSearchDatabaseModal(searchType) {
+export async function openSearchDatabaseModal(searchType, options = {}) {
     const queryField = document.getElementById('databaseSearchQuery');
     const results = document.getElementById('databaseSearchResults');
     if (!queryField || !results) return;
     databaseSearchState.type = searchType;
     databaseSearchState.query = '';
     databaseSearchState.page = 1;
+    databaseSearchState.mode = options.mode || "browse";
+    databaseSearchState.lockedType = databaseSearchState.mode === "select" ? searchType : null;
+    databaseSearchState.selectLabel = options.selectLabel || "Select";
+    databaseSearchState.onSelect = typeof options.onSelect === "function" ? options.onSelect : null;
     setDatabaseSearchType(searchType);
     queryField.value = '';
-    results.innerHTML = `<div class="alert alert-secondary">Type a search term and press Search to query the backend.</div>`;
+    results.innerHTML = `
+        <div class="alert alert-secondary">
+            ${databaseSearchState.mode === "select"
+                ? "Search, then choose the item you want to use."
+                : "Type a search term and press Search to query the backend."}
+        </div>
+    `;
     showModalById('modalSearchDatabase');
 }
 
 
-async function doSearchDatabase() {
+export async function doSearchDatabase() {
     const query = (document.getElementById('databaseSearchQuery').value || '').trim().toLowerCase();
     const type = databaseSearchState.type || 'foods';
     databaseSearchState.type = type;
@@ -244,7 +295,22 @@ function renderSearchResults({
         actions.className =
             'btn-toolbar gap-2';
 
-        buttons.forEach(btn => {
+        const activeButtons = [...buttons];
+
+        if (databaseSearchState.mode === "select" && databaseSearchState.onSelect) {
+            activeButtons.unshift({
+                label: databaseSearchState.selectLabel,
+                className: "btn btn-sm btn-primary",
+                onClick: async item => {
+                    const onSelect = databaseSearchState.onSelect;
+                    await closeSearchModal();
+                    resetSearchMode();
+                    await onSelect(item);
+                }
+            });
+        }
+
+        activeButtons.forEach(btn => {
 
             const button =
                 document.createElement('button');
@@ -257,10 +323,14 @@ function renderSearchResults({
             button.textContent =
                 btn.label;
 
-            button.addEventListener(
-                'click',
-                () => btn.onClick(item)
-            );
+            button.onclick = async () => {
+                try {
+                    await btn.onClick(item);
+                } catch (error) {
+                    console.error(error);
+                    alert(error.message || String(error));
+                }
+            };
 
             actions.appendChild(button);
         });
@@ -404,7 +474,7 @@ function renderFoods(data) {
                     'btn btn-sm btn-outline-danger',
 
                 onClick: item =>
-                    deleteEntityByType("foods", item.id)
+                    deleteSearchEntity("foods", item.id)
             }
         ]
     });
@@ -457,7 +527,7 @@ function renderMeals(data) {
                     'btn btn-sm btn-outline-danger',
 
                 onClick: item =>
-                    deleteEntityByType("meals", item.id)
+                    deleteSearchEntity("meals", item.id)
             }
         ]
     });
@@ -507,7 +577,7 @@ function renderDrinks(data) {
                     'btn btn-sm btn-outline-danger',
 
                 onClick: item =>
-                    deleteEntityByType("drinks", item.id)
+                    deleteSearchEntity("drinks", item.id)
             }
         ]
     });
@@ -560,7 +630,7 @@ function renderDrinkLists(data) {
                     'btn btn-sm btn-outline-danger',
 
                 onClick: item =>
-                    deleteEntityByType("drink lists", item.id)
+                    deleteSearchEntity("drink lists", item.id)
             }
         ]
     });
@@ -596,43 +666,37 @@ function openViewSearchItem({
 }
 
 
-function openViewSearchFood(foodId) {
-    openViewSearchItem({
-        itemId: foodId,
-        selectId: 'foodSelect',
-        loadFunction: loadFoodDetails,
-        modalFunction: showFoodDetailsModal
+async function openViewSearchFood(foodId) {
+    await closeSearchModal();
+    await showFoodDetailsModal(foodId);
+}
+
+
+async function openViewSearchMeal(mealId) {
+    await closeSearchModal();
+    await showMealDetailsModal(mealId);
+}
+
+
+async function openViewSearchDrink(drinkId) {
+    await closeSearchModal();
+    await showDrinkDetailsModal(drinkId);
+}
+
+function resetSearchMode() {
+    databaseSearchState.mode = "browse";
+    databaseSearchState.lockedType = null;
+    databaseSearchState.selectLabel = "Select";
+    databaseSearchState.onSelect = null;
+    document.querySelectorAll('#databaseSearchTypeButtons [data-search-type]').forEach(btn => {
+        btn.disabled = false;
     });
 }
 
 
-function openViewSearchMeal(mealId) {
-    openViewSearchItem({
-        itemId: mealId,
-        selectId: 'mealSelect',
-        loadFunction: loadMealDetails,
-        modalFunction: showMealDetailsModal
-    });
-}
-
-
-function openViewSearchDrink(drinkId) {
-    openViewSearchItem({
-        itemId: drinkId,
-        selectId: 'drinkSelect',
-        loadFunction: loadDrinkDetails,
-        modalFunction: showDrinkDetailsModal
-    });
-}
-
-
-function openViewSearchDrinkList(drinkListId) {
-    openViewSearchItem({
-        itemId: drinkListId,
-        selectId: 'drinkListSelect',
-        loadFunction: loadDrinkListDetails,
-        modalFunction: showDrinkListDetailsModal
-    });
+async function openViewSearchDrinkList(drinkListId) {
+    await closeSearchModal();
+    await showDrinkListDetailsModal(drinkListId);
 }
 
 
@@ -641,4 +705,255 @@ function setDatabaseSearchPage(page) {
     if (page < 1 || page > totalPages) return;
     databaseSearchState.page = page;
     renderDatabaseSearchResults();
+}
+
+
+export function openCreateFromSearch() {
+    const type = databaseSearchState.type;
+    pendingSearchReturn = {
+        type,
+        query: databaseSearchState.query,
+        mode: databaseSearchState.mode,
+        selectLabel: databaseSearchState.selectLabel,
+        onSelect: databaseSearchState.onSelect
+    };
+
+    const modalByType = {
+        foods: "modalCreateFood",
+        meals: "modalCreateMealPrep",
+        drinks: "modalCreateDrink",
+        "drink lists": "modalCreateDrinkList"
+    };
+
+    showModalById(modalByType[type] || "modalCreateFood");
+}
+
+
+export async function returnToSearchAfterCreate() {
+    if (!pendingSearchReturn) return false;
+
+    const next = pendingSearchReturn;
+    pendingSearchReturn = null;
+
+    await openSearchDatabaseModal(next.type, {
+        mode: next.mode,
+        selectLabel: next.selectLabel,
+        onSelect: next.onSelect
+    });
+
+    const queryField = document.getElementById('databaseSearchQuery');
+    if (queryField) {
+        queryField.value = next.query || '';
+    }
+
+    await doSearchDatabase();
+    return true;
+}
+
+
+function getCurrentSearchReturn() {
+    return {
+        type: databaseSearchState.type,
+        query: databaseSearchState.query,
+        mode: databaseSearchState.mode,
+        selectLabel: databaseSearchState.selectLabel,
+        onSelect: databaseSearchState.onSelect
+    };
+}
+
+
+function closeSearchModal() {
+    const modal = document.getElementById('modalSearchDatabase');
+
+    if (!modal || typeof bootstrap === 'undefined' || !modal.classList.contains("show")) {
+        return Promise.resolve();
+    }
+
+    return new Promise(resolve => {
+        bootstrap.Modal.getOrCreateInstance(modal).hide();
+        window.setTimeout(resolve, 250);
+    });
+}
+
+
+async function returnToSearchState(searchReturn) {
+    await openSearchDatabaseModal(searchReturn.type, {
+        mode: searchReturn.mode,
+        selectLabel: searchReturn.selectLabel,
+        onSelect: searchReturn.onSelect
+    });
+
+    const queryField = document.getElementById('databaseSearchQuery');
+    if (queryField) {
+        queryField.value = searchReturn.query || '';
+    }
+
+    await doSearchDatabase();
+}
+
+
+function findSearchItem(id) {
+    return databaseSearchState.results.find(item => Number(item.id) === Number(id));
+}
+
+
+function renderTextInput({ id, label, value = "", type = "text", step = "" }) {
+    return `
+        <div class="mb-3">
+            <label class="form-label" for="${id}">${label}</label>
+            <input id="${id}" class="form-control" type="${type}" ${step ? `step="${step}"` : ""} value="${escapeHtml(String(value ?? ""))}">
+        </div>
+    `;
+}
+
+
+function editSearchFood(foodId) {
+    const food = findSearchItem(foodId);
+    if (!food) return;
+
+    const searchReturn = getCurrentSearchReturn();
+    awaitCloseSearchThenOpen(() => openFormModal({
+        title: "Edit food",
+        submitLabel: "Save",
+        cancelLabel: "Back",
+        body: `
+            ${renderTextInput({ id: "searchEditFoodName", label: "Food name", value: food.name })}
+            ${renderTextInput({ id: "searchEditFoodBrand", label: "Brand", value: food.brand || "" })}
+            ${renderTextInput({ id: "searchEditFoodPrice", label: "Price", value: food.price ?? "", type: "number", step: "0.01" })}
+        `,
+        onCancel: async () => {
+            await returnToSearchState(searchReturn);
+        },
+        onSubmit: async () => {
+            const name = document.getElementById("searchEditFoodName")?.value.trim();
+            const brand = document.getElementById("searchEditFoodBrand")?.value.trim() || null;
+            const priceValue = document.getElementById("searchEditFoodPrice")?.value;
+            const price = priceValue === "" ? null : Number(priceValue);
+
+            if (!name) {
+                alert("Food name is required.");
+                return;
+            }
+
+            if (priceValue !== "" && (!Number.isFinite(price) || price < 0)) {
+                alert("Price must be zero or higher.");
+                return;
+            }
+
+            try {
+                await FoodsAPI.update(food.id, {
+                    name,
+                    brand,
+                    price,
+                    base_amount: food.base_amount ?? null,
+                    base_unit: food.base_unit ?? null
+                });
+                await loadFoods();
+                closeAppModal();
+                await returnToSearchState(searchReturn);
+            } catch (error) {
+                alert("Unable to update food: " + error.message);
+            }
+        }
+    }));
+}
+
+
+function editSearchMeal(mealId) {
+    const meal = findSearchItem(mealId);
+    if (!meal) return;
+
+    openSimpleNameEdit({
+        title: "Edit meal",
+        inputId: "searchEditMealName",
+        item: meal,
+        update: data => MealsAPI.update(meal.id, data),
+        reload: loadMeals
+    });
+}
+
+
+function editSearchDrink(drinkId) {
+    const drink = findSearchItem(drinkId);
+    if (!drink) return;
+
+    openSimpleNameEdit({
+        title: "Edit drink",
+        inputId: "searchEditDrinkName",
+        item: drink,
+        update: data => DrinksAPI.update(drink.id, data),
+        reload: loadDrinks
+    });
+}
+
+
+function editSearchDrinkList(drinkListId) {
+    const drinkList = findSearchItem(drinkListId);
+    if (!drinkList) return;
+
+    openSimpleNameEdit({
+        title: "Edit drink list",
+        inputId: "searchEditDrinkListName",
+        item: drinkList,
+        update: data => DrinksAPI.updateList(drinkList.id, data),
+        reload: loadDrinkLists
+    });
+}
+
+
+function openSimpleNameEdit({
+    title,
+    inputId,
+    item,
+    update,
+    reload
+}) {
+    const searchReturn = getCurrentSearchReturn();
+    awaitCloseSearchThenOpen(() => openFormModal({
+        title,
+        submitLabel: "Save",
+        cancelLabel: "Back",
+        body: renderTextInput({ id: inputId, label: "Name", value: item.name }),
+        onCancel: async () => {
+            await returnToSearchState(searchReturn);
+        },
+        onSubmit: async () => {
+            const name = document.getElementById(inputId)?.value.trim();
+
+            if (!name) {
+                alert("Name is required.");
+                return;
+            }
+
+            try {
+                await update({ name });
+                await reload();
+                closeAppModal();
+                await returnToSearchState(searchReturn);
+            } catch (error) {
+                alert("Unable to update: " + error.message);
+            }
+        }
+    }));
+}
+
+
+async function awaitCloseSearchThenOpen(openNext) {
+    await closeSearchModal();
+    openNext();
+}
+
+
+async function deleteSearchEntity(type, id) {
+    const deleted = await deleteEntityByType(type, id);
+    if (!deleted) return;
+
+    await Promise.all([
+        loadFoods(),
+        loadMeals(),
+        loadDrinks(),
+        loadDrinkLists()
+    ]);
+
+    await doSearchDatabase();
 }

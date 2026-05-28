@@ -460,3 +460,60 @@ body.dark-mode .btn-warning {
 
     cursor: pointer;
 }
+
+.modal-body .drink-ingredient-add-row {
+    flex-direction: row;
+}
+
+.drink-ingredient-food-control,
+.drink-ingredient-amount-control,
+.drink-ingredient-unit-control,
+.drink-ingredient-add-control {
+    min-width: 0;
+}
+
+.modal-body .drink-ingredient-add-row > .drink-ingredient-food-control {
+    flex: 1 1 180px;
+}
+
+.modal-body .drink-ingredient-add-row > .drink-ingredient-amount-control {
+    flex: 0 0 90px;
+}
+
+.modal-body .drink-ingredient-edit-row > .drink-ingredient-amount-control {
+    flex: 0 0 90px;
+}
+
+.modal-body .drink-ingredient-add-row > .drink-ingredient-unit-control {
+    flex: 0 0 76px;
+}
+
+.modal-body .drink-ingredient-edit-row > .drink-ingredient-unit-control {
+    flex: 0 0 76px;
+}
+
+.modal-body .drink-ingredient-add-row > .drink-ingredient-add-control {
+    flex: 0 0 auto;
+}
+
+.modal-body .drink-ingredient-edit-row > .drink-ingredient-actions-control {
+    flex: 0 0 auto;
+}
+
+.drink-ingredient-add-control .btn {
+    min-width: 72px;
+}
+
+@media (max-width: 575.98px) {
+    .drink-ingredient-food-control,
+    .drink-ingredient-amount-control,
+    .drink-ingredient-unit-control,
+    .drink-ingredient-add-control,
+    .drink-ingredient-actions-control {
+        flex: 1 1 100%;
+    }
+    
+    .drink-ingredient-add-control .btn {
+        width: 100%;
+    }
+}

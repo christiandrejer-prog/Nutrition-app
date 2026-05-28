@@ -23,6 +23,12 @@ export const FoodsAPI = {
     getMacros: (id) =>
         get(`/foods/${id}/macros`),
 
+    addNutrient: (foodId, data) =>
+        post(`/foods/${foodId}/nutrients`, data),
+
     updateNutrient: (foodId, nutrientId, data) =>
-        put(`/foods/${foodId}/nutrients/${nutrientId}`, data)
+        put(`/foods/${foodId}/nutrients/${nutrientId}`, data),
+
+    deleteNutrient: (foodId, nutrientId) =>
+        del(`/foods/${foodId}/nutrients/${nutrientId}`)
 };

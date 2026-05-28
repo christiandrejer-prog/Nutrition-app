@@ -11,7 +11,7 @@
 // IMPORTS
 // ======================================================
 
-import { setNutrients, getState } from '../state.js';
+import { setNutrients, getState, setEditing } from '../state.js';
 import { NutrientsAPI } from '../api/nutrientsAPI.js';
 import { escapeHtml } from '../utils.js';
 
@@ -20,32 +20,42 @@ import { escapeHtml } from '../utils.js';
 // ======================================================
 
 export async function createNutrient() {
-    const name = document.getElementById("nutrientName")?.value.trim();
-    const unit = document.getElementById("nutrientUnit")?.value.trim();
+    const name = document.getElementById("nutrientName")?.value.trim()
+        || document.getElementById("modalNutrientName")?.value.trim();
+    const unit = document.getElementById("nutrientUnit")?.value.trim()
+        || document.getElementById("modalNutrientUnit")?.value.trim();
 
     if (!name || !unit) {
         alert("Please enter both name and unit");
-        return;
+        return false;
     }
 
-    if (nutrientsCache.some(n =>
+    if (getState().nutrients.some(n =>
         n.name.trim().toLowerCase() === name.toLowerCase() &&
         n.unit.trim().toLowerCase() === unit.toLowerCase()
     )) {
         alert("This nutrient already exists");
-        return;
+        return false;
     }
 
     try {
         await NutrientsAPI.create({ name, unit });
 
-        document.getElementById("nutrientName").value = "";
-        document.getElementById("nutrientUnit").value = "";
+        const pageName = document.getElementById("nutrientName");
+        const pageUnit = document.getElementById("nutrientUnit");
+        const modalName = document.getElementById("modalNutrientName");
+        const modalUnit = document.getElementById("modalNutrientUnit");
+        if (pageName) pageName.value = "";
+        if (pageUnit) pageUnit.value = "";
+        if (modalName) modalName.value = "";
+        if (modalUnit) modalUnit.value = "";
 
         await loadNutrients();
+        return true;
 
     } catch (err) {
         alert("Error saving nutrient: " + err.message);
+        return false;
     }
 }
 
@@ -121,6 +131,15 @@ export async function loadNutrients() {
 // ======================================================
 // EDIT UI
 // ======================================================
+
+export function toggleNutrientEdit() {
+    const next = !getState().editing.nutrients;
+    setEditing("nutrients", next);
+    const btn = document.getElementById("nutrient-edit-btn");
+    if (btn) btn.textContent = next ? "Stop Editing Nutrients" : "Edit Nutrients";
+    loadNutrients();
+}
+
 
 export function showEditNutrient(nutrientId, currentName, currentUnit) {
     const row = document.getElementById(`nutrient-row-${nutrientId}`);

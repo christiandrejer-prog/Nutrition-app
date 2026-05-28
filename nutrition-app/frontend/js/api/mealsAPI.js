@@ -20,6 +20,9 @@ export const MealsAPI = {
     getItems: (id) =>
         get(`/meals/${id}/items/detailed`),
 
+    getDetailed: (id) =>
+        get(`/meals/${id}/items/detailed`),
+
     addItem: (mealId, data) =>
         post(`/meals/${mealId}/items`, data),
 

@@ -18,7 +18,7 @@ import { getApiUrl } from "./config.js";
 
 
 
-function getDatabaseEndpoint(type) {
+export function getDatabaseEndpoint(type) {
     // This function maps the user-friendly search type to the actual API endpoint. 
     // It allows us to keep the UI labels separate from the backend structure, 
     // and makes it easier to manage any differences in naming conventions or endpoint paths.
@@ -33,7 +33,7 @@ function getDatabaseEndpoint(type) {
 }
 
 
-function buildSearchableText(item) {
+export function buildSearchableText(item) {
     // Universal search fields across ALL database types
     return [
         item.name,
@@ -48,7 +48,7 @@ function buildSearchableText(item) {
 }
 
 
-function openEntityModal({
+export function openEntityModal({
     modalId,
     contentId,
     loadingText = 'Loading...'
@@ -68,7 +68,7 @@ function openEntityModal({
 }
 
 
-async function fetchJson(url, fallback = null) {
+export async function fetchJson(url, fallback = null) {
     try {
         const response = await fetch(url);
 
@@ -84,7 +84,7 @@ async function fetchJson(url, fallback = null) {
 }
 
 
-async function apiRequest(url, method = 'GET', body = null) {
+export async function apiRequest(url, method = 'GET', body = null) {
     const options = {
         method,
         headers: {
@@ -117,9 +117,14 @@ export function escapeHtml(text) {
 }
 
 
+//export function formatCurrency(value) { ... }
+
+
+//export function toNumber(value, fallback = 0) { ... }
+
 
 // CRUD helpers
-function editSearchName({
+export function editSearchName({
     id,
     collection,
     array,
@@ -153,24 +158,22 @@ function editSearchName({
 }
 
 
-async function deleteEntityByType(type, id) {
-    const config = ENTITY_CONFIG[type];
-    if (!config) throw new Error("Unknown entity type: " + type);
+export async function deleteEntityByType(type, id) {
+    const endpoint = getDatabaseEndpoint(type).replace(/\/$/, "");
+    const label = type === "drink lists" ? "drink list" : type.slice(0, -1) || type;
 
-    if (!confirm(config.confirm)) return;
-    api = getDatabaseEndpoint(type);
-    const response = await fetch(`${getAPIUrl()}/${api}${api === "drinks/lists" ? "/" : ""}${id}`, {
+    if (!confirm(`Delete this ${label}?`)) return false;
+
+    const response = await fetch(`${getApiUrl()}/${endpoint}/${id}`, {
         method: "DELETE"
     });
 
     const result = await response.json().catch(() => ({}));
 
-    if (response.ok) {
-        config.reload?.();
-        if (config.details) {
-            document.getElementById(config.details)?.replaceChildren();
-        }
-    } else {
+    if (!response.ok) {
         alert("Error deleting: " + (result.detail || JSON.stringify(result)));
+        return false;
     }
+
+    return true;
 }

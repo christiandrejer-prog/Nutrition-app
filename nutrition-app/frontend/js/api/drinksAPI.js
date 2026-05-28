@@ -14,9 +14,22 @@ import { get, post, put, del } from './core.js';
 export const DrinksAPI = {
     // Drinks:
     getAll: () => get('/drinks/'),
+    getDetail: (id) => get(`/drinks/details/${id}`),
     create: (data) => post('/drinks/', data),
     update: (id, data) => put(`/drinks/${id}`, data),
     delete: (id) => del(`/drinks/${id}`),
+
+    getIngredients: (id) =>
+        get(`/drinks/${id}/ingredients`),
+
+    addIngredient: (id, data) =>
+        post(`/drinks/${id}/ingredients`, data),
+
+    updateIngredient: (drinkId, ingredientId, data) =>
+        put(`/drinks/${drinkId}/ingredients/${ingredientId}`, data),
+
+    deleteIngredient: (drinkId, ingredientId) =>
+        del(`/drinks/${drinkId}/ingredients/${ingredientId}`),
 
 
     // Lists:
@@ -38,8 +51,8 @@ export const DrinksAPI = {
     addListItem: (listId, data) =>
         post(`/drinks/lists/${listId}/items`, data),
 
-    updateListItem: (listId, itemId) =>
-        put(`/drinks/lists/${listId}/items/${itemId}`),
+    updateListItem: (listId, itemId, data) =>
+        put(`/drinks/lists/${listId}/items/${itemId}`, data),
 
     deleteListItem: (listId, itemId) =>
         del(`/drinks/lists/${listId}/items/${itemId}`)

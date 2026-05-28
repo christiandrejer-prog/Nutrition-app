@@ -11,14 +11,9 @@
 // ###########################################################
 
 // Imports --- IN THE WORKS, DONT KNOW IF THIS IS NEEDED
-import { getApiUrl } from '../config.js';
-import { loadNutrients } from './nutrients.js';
+import { getNutrients } from '../state.js';
 import { escapeHtml } from '../utils.js';
 import { FoodsAPI } from '../api/foodsAPI.js';
-
-
-// State
-const nutrients = await loadNutrients();
 
 
 // Exports --- IN THE WORKS, DONT KNOW IF THIS IS NEEDED
@@ -30,6 +25,21 @@ const nutrients = await loadNutrients();
 export function initModals() {
     // optional setup hook for future use
     console.info("Modals initialized");
+}
+
+export function showModalById(modalId) {
+    if (typeof bootstrap === 'undefined') return;
+
+    document.querySelectorAll('.modal.show').forEach(activeModal => {
+        bootstrap.Modal.getInstance(activeModal)?.hide();
+    });
+
+    if (!modalId) return;
+
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        bootstrap.Modal.getOrCreateInstance(modal).show();
+    }
 }
 
 export async function showFoodDetailsModal(foodId) {
@@ -44,11 +54,12 @@ export async function showFoodDetailsModal(foodId) {
     }
 
     try {
+        const nutrients = getNutrients();
         const nutrientResponse = await FoodsAPI.getNutrients(foodId);
         const macroResponse = await FoodsAPI.getMacros(foodId);
 
-        const nutrientData = nutrientResponse.ok ? await nutrientResponse.json() : [];
-        const macroData = macroResponse.ok ? await macroResponse.json() : null;
+        const nutrientData = Array.isArray(nutrientResponse) ? nutrientResponse : [];
+        const macroData = macroResponse || null;
 
         let html = `
             <div class="d-flex justify-content-between align-items-start mb-3">
@@ -118,8 +129,9 @@ export async function showEditFoodMacrosModal(foodId) {
     }
 
     try {
+        const nutrients = getNutrients();
         const nutrientResponse = await FoodsAPI.getNutrients(foodId);
-        const nutrientData = nutrientResponse.ok ? await nutrientResponse.json() : [];
+        const nutrientData = Array.isArray(nutrientResponse) ? nutrientResponse : [];
 
         let html = `
             <h5 class="mb-3">Edit Food Macros</h5>
@@ -199,7 +211,9 @@ export async function saveFoodMacros(foodId) {
     try {
         await Promise.all(
             updates.map(update =>
-                FoodsAPI.updateNutrient(foodId, nutrientId, amount)
+                FoodsAPI.updateNutrient(foodId, update.nutrientId, {
+                    amount_per_100g: update.amount
+                })
             )
         );
 

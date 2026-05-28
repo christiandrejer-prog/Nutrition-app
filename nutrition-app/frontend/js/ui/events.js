@@ -12,18 +12,14 @@
 import {
     showFoodDetailsModal,
     showEditFoodMacrosModal,
-    saveFoodMacros
+    saveFoodMacros,
+    showModalById
 } from "../modules/modals.js";
 
-import { showModalById } from "../app.js";
 import { openSearchDatabaseModal } from "../modules/search.js";
-import { renderStatusOutput } from "../app.js";
-import { renderHomeOutput } from "../app.js";
-import { renderMealDashboardOutput } from "../app.js";
-import { renderDrinkDashboardOutput } from "../app.js";
-import { renderProfileOutput } from "../app.js";
-import { renderSettingsOutput } from "../app.js";
-import { selectDrinkListUI, addConsumedMealUI, addDrinkListItemUI } from "../app.js"; // Placeholders will be deleted and re-routed
+import { renderRoute } from "./renders.js";
+import { selectDrinkListUI, addDrinkListItemUI, toggleDrinkListDeleteMode } from "../modules/drinks/dashboard/drinks-dashboard.js";
+import { addConsumedMealUI, toggleConsumedMealDeleteMode } from "../modules/meals/dashboard/consumedMeals.js";
 
 
 // Exports --- IN THE WORKS, DONT KNOW IF THIS IS NEEDED
@@ -120,27 +116,12 @@ function handleAction(action, id, e) {
 
             // views
             case "status":
-                renderStatusOutput();
-                break;
-
             case "home":
-                renderHomeOutput();
-                break;
-
             case "meal-dashboard":
-                renderMealDashboardOutput();
-                break;
-
             case "drink-dashboard":
-                renderDrinkDashboardOutput();
-                break;
-
             case "account":
-                renderProfileOutput();
-                break;
-
             case "settings":
-                renderSettingsOutput();
+                renderRoute(action);
                 break;
 
             // food-specific actions
@@ -157,9 +138,19 @@ function handleAction(action, id, e) {
                 break;
 
             default:
-                toast(`Not implemented: ${action}`);
+                console.info(`Not implemented: ${action}`);
         }
     } catch (err) {
         console.warn("UI handler error:", err);
     }
 }
+
+// eventually change from switch to 
+//const ACTIONS = {
+//    "create-food": () => showModal("modalCreateFood"),
+//    "home": renderHomeView,
+//    "settings": renderSettingsView,
+//};
+
+// Use case
+//ACTIONS[action]?.(id, e);

@@ -15,7 +15,12 @@ const state = {
     nutrients: [],
     foods: [],
     meals: [],
+
     drinks: [],
+    drinkLists: [],
+    selectedDrinkListId: null,
+    selectedDrinkListItems: [],
+
     intakeSummary: null,
 
     editing: {
@@ -23,7 +28,9 @@ const state = {
         foods: false,
         meals: false,
         mealItems: false,
-        foodDetails: false
+        foodDetails: false,
+        drinks: false,
+        drinkLists: false
     },
 
     deleteModes: {
@@ -32,8 +39,8 @@ const state = {
     },
 
     databaseSearch: {
-        type: 'foods',
-        query: '',
+        type: "foods",
+        query: "",
         page: 1,
         pageSize: 10,
         results: []
@@ -102,6 +109,21 @@ export function setDrinks(data) {
     notify();
 }
 
+export function setDrinkLists(data) {
+    state.drinkLists = data;
+    notify();
+}
+
+export function setSelectedDrinkListId(id) {
+    state.selectedDrinkListId = id;
+    notify();
+}
+
+export function setSelectedDrinkListItems(data) {
+    state.selectedDrinkListItems = data;
+    notify();
+}
+
 // ======================================================
 // GETTERS
 // ======================================================
@@ -124,6 +146,14 @@ export function getMeals() {
 
 export function getDrinks() {
     return state.drinks;
+}
+
+export function getDrinkLists() {
+    return state.drinkLists;
+}
+
+export function getSelectedDrinkListItems() {
+    return state.selectedDrinkListItems;
 }
 
 // ======================================================

@@ -11,7 +11,7 @@
 // IMPORTS
 // ======================================================
 
-import { setFoods, getState } from '../state.js';
+import { setFoods, getState, setEditing, getNutrients } from '../state.js';
 import { FoodsAPI } from '../api/foodsAPI.js';
 import { escapeHtml } from '../utils.js';
 
@@ -88,9 +88,13 @@ export async function loadFoods() {
 // ======================================================
 
 export async function createFood() {
-    const name = document.getElementById("foodName")?.value.trim();
-    const brand = document.getElementById("foodBrand")?.value.trim();
-    const priceRaw = document.getElementById("foodPrice")?.value;
+    const name = document.getElementById("foodName")?.value.trim()
+        || document.getElementById("modalFoodName")?.value.trim();
+    const brand = document.getElementById("foodBrand")?.value.trim()
+        || document.getElementById("modalFoodBrand")?.value.trim()
+        || "";
+    const priceRaw = document.getElementById("foodPrice")?.value
+        || document.getElementById("modalFoodPrice")?.value;
 
     const price =
         priceRaw === "" || priceRaw == null
@@ -99,15 +103,15 @@ export async function createFood() {
 
     if (!name) {
         alert("Please enter a food name");
-        return;
+        return false;
     }
 
-    if (foodsCache.some(f =>
+    if (getState().foods.some(f =>
         f.name.trim().toLowerCase() === name.toLowerCase() &&
         (f.brand || "").trim().toLowerCase() === brand.toLowerCase()
     )) {
         alert("This food already exists");
-        return;
+        return false;
     }
 
     try {
@@ -117,13 +121,16 @@ export async function createFood() {
             price
         });
 
-        document.getElementById("foodName").value = "";
-        document.getElementById("foodBrand").value = "";
-        document.getElementById("foodPrice").value = "";
+        ["foodName", "foodBrand", "foodPrice", "modalFoodName", "modalFoodBrand", "modalFoodPrice"].forEach(id => {
+            const input = document.getElementById(id);
+            if (input) input.value = "";
+        });
 
         await loadFoods();
+        return true;
     } catch (err) {
         alert("Error saving food: " + err.message);
+        return false;
     }
 }
 
@@ -169,6 +176,18 @@ export async function saveFood(foodId) {
 // DELETE FOOD NUTRIENT
 // ======================================================
 
+export async function deleteFood(foodId) {
+    if (!confirm("Delete this food?")) return;
+
+    try {
+        await FoodsAPI.delete(foodId);
+        await loadFoods();
+    } catch (err) {
+        alert("Error deleting food: " + err.message);
+    }
+}
+
+
 export async function deleteFoodNutrient(foodId, nutrientId) {
     if (!confirm("Delete this nutrient entry?")) return;
 
@@ -186,7 +205,7 @@ export async function deleteFoodNutrient(foodId, nutrientId) {
 
 export async function addNutrientToFood() {
     const foodId = document.getElementById("foodSelect")?.value;
-    //const nutrientId = document.getElementById("nutrientSelect")?.value;
+    const nutrientId = document.getElementById("nutrientSelect")?.value;
     const amount = document.getElementById("amountPer100g")?.value;
 
     if (!foodId || !nutrientId || !amount) {
@@ -229,9 +248,9 @@ export async function loadFoodDetails(foodId) {
             const list = document.createElement("ul");
 
             nutrients.forEach(entry => {
-                const food = foodsCache.find(f => f.id === entry.nutrient_id);
-                const name = food ? food.name : `Nutrient ${entry.nutrient_id}`;
-                const unit = food ? food.unit : "";
+                const nutrient = getNutrients().find(n => n.id === entry.nutrient_id);
+                const name = nutrient ? nutrient.name : `Nutrient ${entry.nutrient_id}`;
+                const unit = nutrient ? nutrient.unit : "";
 
                 const li = document.createElement("li");
                 li.textContent = `${name}: ${entry.amount_per_100g} ${unit}`;
@@ -264,6 +283,28 @@ export async function loadFoodDetails(foodId) {
 // UI EDIT HELPERS (unchanged logic, module-safe)
 // ======================================================
 
+export function toggleFoodDetailsEdit() {
+    const next = !getState().editing.foodDetails;
+    setEditing("foodDetails", next);
+    const btn = document.getElementById("food-details-edit-btn");
+    if (btn) btn.textContent = next ? "Stop Editing Nutrients in Food" : "Edit Nutrients in Food";
+    // Reload if a food is selected
+    const foodSelect = document.getElementById("foodSelect");
+    if (foodSelect.value) {
+        loadFoodDetails();
+    }
+}
+
+
+export function toggleFoodEdit() {
+    const next = !getState().editing.foods;
+    setEditing("foods", next);
+    const btn = document.getElementById("food-edit-btn");
+    if (btn) btn.textContent = next ? "Stop Editing Foods" : "Edit Foods";
+    loadFoods();
+}
+
+
 export function showEditFood(foodId, currentName, currentBrand) {
     const row = document.getElementById(`food-row-${foodId}`);
     if (!row) return;
@@ -282,7 +323,7 @@ export function showEditFood(foodId, currentName, currentBrand) {
     priceInput.id = `food-price-edit-${foodId}`;
     priceInput.type = "number";
 
-    const foodObj = foodsCache.find(f => String(f.id) === String(foodId));
+    const foodObj = getState().foods.find(f => String(f.id) === String(foodId));
     if (foodObj?.price != null) priceInput.value = foodObj.price;
 
     const saveButton = document.createElement("button");

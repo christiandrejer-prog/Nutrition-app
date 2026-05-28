@@ -21,6 +21,11 @@ class DrinkIngredientCreate(BaseModel):
     unit: str = "ml"
 
 
+class DrinkIngredientUpdate(BaseModel):
+    amount: float = Field(..., gt=0)
+    unit: str = "ml"
+
+
 class DrinkIngredientResponse(BaseModel):
     id: int
     drink_id: int
