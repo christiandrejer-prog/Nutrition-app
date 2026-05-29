@@ -180,6 +180,308 @@ button:not(.btn):hover {
     font-size: 0.95rem;
 }
 
+.settings-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 1rem;
+}
+
+.settings-section {
+    margin: 0;
+}
+
+.settings-section h5 {
+    margin-bottom: 1rem;
+}
+
+.settings-list {
+    display: grid;
+    gap: 0.75rem;
+}
+
+.settings-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.75rem;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 8px;
+}
+
+.settings-row-select {
+    align-items: flex-start;
+}
+
+.settings-row .form-select {
+    max-width: 150px;
+}
+
+.dashboard-price-hover {
+    cursor: help;
+    border-bottom: 1px dotted currentColor;
+}
+
+.dashboard-tabs {
+    display: grid;
+    gap: 1rem;
+}
+
+.dashboard-tab-list {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    align-items: center;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.dashboard-tab {
+    appearance: none;
+    border: 1px solid transparent;
+    border-bottom: 0;
+    background: transparent;
+    color: inherit;
+    padding: 0.7rem 1rem;
+    margin: 0;
+    border-radius: 8px 8px 0 0;
+    font-weight: 600;
+    position: relative;
+}
+
+.dashboard-tab:hover {
+    background: rgba(0, 0, 0, 0.04);
+}
+
+.dashboard-tab.active {
+    background: #ffffff;
+    border-color: rgba(13, 110, 253, 0.45);
+    color: #0d6efd;
+    box-shadow: 0 -1px 0 #ffffff inset;
+}
+
+.dashboard-tab.active::after {
+    content: "";
+    position: absolute;
+    left: 0.75rem;
+    right: 0.75rem;
+    bottom: -1px;
+    height: 3px;
+    border-radius: 999px;
+    background: #0d6efd;
+}
+
+.dashboard-tab-panel {
+    display: none;
+}
+
+.dashboard-tab-panel.active {
+    display: block;
+}
+
+.profile-preference-list {
+    display: grid;
+    gap: 0.75rem;
+}
+
+.profile-preference-option {
+    display: flex;
+    gap: 0.75rem;
+    align-items: flex-start;
+    padding: 0.75rem;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 8px;
+}
+
+.profile-preference-option span {
+    display: grid;
+    gap: 0.2rem;
+}
+
+.profile-preference-option small {
+    color: #6c757d;
+}
+
+.maintenance-form .form-label {
+    margin-bottom: 0.2rem;
+}
+
+.maintenance-activity-row .maintenance-activity-name {
+    flex: 1 1 120px;
+}
+
+.maintenance-activity-row .maintenance-activity-minutes {
+    flex: 0 0 86px;
+}
+
+.maintenance-activity-meta {
+    flex: 0 0 104px;
+    display: grid;
+    gap: 0.1rem;
+    padding: 0.35rem 0.5rem;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 8px;
+}
+
+.maintenance-activity-met-label {
+    font-weight: 700;
+    font-size: 0.82rem;
+}
+
+.maintenance-activity-kcal {
+    color: #6c757d;
+}
+
+.maintenance-direct-kcal-row .maintenance-direct-kcal-label {
+    flex: 1 1 120px;
+}
+
+.maintenance-direct-kcal-row .maintenance-direct-kcal-value {
+    flex: 0 0 112px;
+}
+
+.activity-kcal-summary {
+    display: grid;
+    gap: 0.15rem;
+    padding: 0.75rem;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 8px;
+}
+
+.activity-kcal-summary span,
+.activity-kcal-summary small {
+    color: #6c757d;
+}
+
+.activity-kcal-summary strong {
+    font-size: 1.05rem;
+}
+
+.maintenance-result-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+}
+
+.maintenance-result-grid > div {
+    padding: 0.55rem;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 8px;
+}
+
+.maintenance-result-grid span {
+    display: block;
+    font-size: 0.78rem;
+    color: #6c757d;
+}
+
+.maintenance-result-grid strong {
+    display: block;
+    font-size: 0.95rem;
+}
+
+.maintenance-breakdown {
+    display: grid;
+    gap: 0.35rem;
+    padding: 0.75rem;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 8px;
+}
+
+.maintenance-breakdown-title {
+    font-weight: 700;
+    font-size: 0.9rem;
+}
+
+.maintenance-breakdown-row,
+.maintenance-breakdown-total {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.75rem;
+    font-size: 0.86rem;
+}
+
+.maintenance-breakdown-row span,
+.maintenance-breakdown-note {
+    color: #6c757d;
+}
+
+.maintenance-breakdown-note {
+    font-size: 0.78rem;
+}
+
+.maintenance-breakdown-total {
+    padding-top: 0.45rem;
+    border-top: 1px solid rgba(0, 0, 0, 0.08);
+    font-weight: 700;
+}
+
+.intake-target-row {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+}
+
+.intake-target-row > div {
+    padding: 0.55rem;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 8px;
+}
+
+.intake-target-row span {
+    display: block;
+    font-size: 0.78rem;
+    color: #6c757d;
+}
+
+.intake-target-row strong {
+    display: block;
+    font-size: 0.9rem;
+}
+
+.macro-balance,
+.macro-balance-empty {
+    padding: 0.75rem;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 8px;
+}
+
+.macro-balance-title {
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+
+.macro-balance-row,
+.macro-balance-header {
+    display: grid;
+    grid-template-columns: 1fr repeat(3, minmax(54px, 0.7fr));
+    gap: 0.45rem;
+    align-items: center;
+    font-size: 0.86rem;
+}
+
+.macro-balance-row {
+    padding: 0.25rem 0;
+}
+
+.macro-balance-row span,
+.macro-balance-header,
+.macro-balance-empty {
+    color: #6c757d;
+}
+
+.macro-balance-header {
+    padding-top: 0.45rem;
+    border-top: 1px solid rgba(0, 0, 0, 0.08);
+    font-size: 0.76rem;
+}
+
+.macro-balance-reference {
+    margin-top: 0.45rem;
+    font-size: 0.76rem;
+    color: #6c757d;
+}
+
 input, select {
     padding: 8px;
     margin: 5px;
@@ -311,6 +613,110 @@ body.dark-mode .btn-info,
 body.dark-mode .btn-danger,
 body.dark-mode .btn-warning {
     filter: brightness(1.05);
+}
+
+body.dark-mode .settings-row {
+    border-color: rgba(255, 255, 255, 0.12);
+    background: #222831;
+}
+
+body.dark-mode .profile-preference-option {
+    border-color: rgba(255, 255, 255, 0.12);
+    background: #222831;
+}
+
+body.dark-mode .profile-preference-option small {
+    color: #9ea3b1;
+}
+
+body.dark-mode .maintenance-result-grid > div {
+    border-color: rgba(255, 255, 255, 0.12);
+    background: #222831;
+}
+
+body.dark-mode .activity-kcal-summary {
+    border-color: rgba(255, 255, 255, 0.12);
+    background: #222831;
+}
+
+body.dark-mode .activity-kcal-summary span,
+body.dark-mode .activity-kcal-summary small {
+    color: #9ea3b1;
+}
+
+body.dark-mode .maintenance-activity-meta {
+    border-color: rgba(255, 255, 255, 0.12);
+    background: #222831;
+}
+
+body.dark-mode .maintenance-activity-kcal {
+    color: #9ea3b1;
+}
+
+body.dark-mode .maintenance-result-grid span {
+    color: #9ea3b1;
+}
+
+body.dark-mode .maintenance-breakdown {
+    border-color: rgba(255, 255, 255, 0.12);
+    background: #222831;
+}
+
+body.dark-mode .maintenance-breakdown-row span,
+body.dark-mode .maintenance-breakdown-note {
+    color: #9ea3b1;
+}
+
+body.dark-mode .maintenance-breakdown-total {
+    border-color: rgba(255, 255, 255, 0.12);
+}
+
+body.dark-mode .intake-target-row > div {
+    border-color: rgba(255, 255, 255, 0.12);
+    background: #222831;
+}
+
+body.dark-mode .intake-target-row span {
+    color: #9ea3b1;
+}
+
+body.dark-mode .macro-balance,
+body.dark-mode .macro-balance-empty {
+    border-color: rgba(255, 255, 255, 0.12);
+    background: #222831;
+}
+
+body.dark-mode .macro-balance-row span,
+body.dark-mode .macro-balance-header,
+body.dark-mode .macro-balance-empty {
+    color: #9ea3b1;
+}
+
+body.dark-mode .macro-balance-header {
+    border-color: rgba(255, 255, 255, 0.12);
+}
+
+body.dark-mode .macro-balance-reference {
+    color: #9ea3b1;
+}
+
+body.dark-mode .dashboard-tab-list {
+    border-color: rgba(255, 255, 255, 0.12);
+}
+
+body.dark-mode .dashboard-tab:hover {
+    background: rgba(255, 255, 255, 0.06);
+}
+
+body.dark-mode .dashboard-tab.active {
+    background: #1d1f24;
+    border-color: rgba(93, 174, 255, 0.55);
+    color: #8fc7ff;
+    box-shadow: 0 -1px 0 #1d1f24 inset;
+}
+
+body.dark-mode .dashboard-tab.active::after {
+    background: #8fc7ff;
 }
 
 .status-error {

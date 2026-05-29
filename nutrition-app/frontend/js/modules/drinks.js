@@ -16,6 +16,14 @@ import { DrinksAPI } from '../api/drinksAPI.js';
 import { escapeHtml } from '../utils.js';
 import { openFormModal } from '../ui/components/modal.js';
 import { openSearchDatabaseModal } from './search.js';
+import {
+    convertMeasurement,
+    formatAmount,
+    getCompatibleDisplayUnit,
+    getPreferredMeasurementUnit,
+    renderUnitOptions
+} from './settings.js';
+import { hideHoverBox, showHoverBox } from '../ui/components/hoverBox.js';
 
 let pendingDrinkIngredientSelection = null;
 
@@ -314,9 +322,7 @@ function renderDrinkDetailsBody(drink, edit) {
                 <div class="drink-ingredient-unit-control">
                     <label class="form-label mb-1" for="drinkDetailUnit">Unit</label>
                     <select id="drinkDetailUnit" class="form-select">
-                        <option value="ml">ml</option>
-                        <option value="g">g</option>
-                        <option value="cl">cl</option>
+                        ${renderUnitOptions(["cl", "ml", "g", "l"])}
                     </select>
                 </div>
                 <div class="drink-ingredient-add-control">
@@ -374,7 +380,7 @@ function renderIngredientRow(ingredient, edit) {
                 </div>
                 <div class="drink-ingredient-unit-control">
                     <select class="form-select form-select-sm drink-ingredient-unit">
-                        ${["ml", "g", "cl"].map(unit => `
+                        ${["cl", "ml", "g", "l"].map(unit => `
                             <option value="${unit}" ${ingredient.unit === unit ? "selected" : ""}>${unit}</option>
                         `).join("")}
                     </select>
@@ -544,8 +550,8 @@ export async function loadDashboardDrinkChart(listId) {
             return;
         }
 
+        const preferredUnit = getPreferredMeasurementUnit();
         const ingredientTotals = {};
-        const ingredientCosts = {};
 
         entries.forEach(entry => {
             const drink = entry.drink;
@@ -554,30 +560,52 @@ export async function loadDashboardDrinkChart(listId) {
             const quantity = Number(entry.quantity || 1);
 
             drink.ingredients.forEach(ingredient => {
-                const name =
-                    ingredient.food?.name ||
-                    ingredient.name ||
-                    'Unknown';
-
+                const food = ingredient.food || {};
+                const name = food.name || ingredient.name || 'Unknown';
                 const amount = Number(ingredient.amount || 0);
-                const baseAmount = Number(ingredient.food?.base_amount || 1);
-                const unitPrice = Number(ingredient.food?.price || 0);
+                const sourceUnit = ingredient.unit || food.base_unit || preferredUnit;
+                const displayUnit = getCompatibleDisplayUnit(sourceUnit, preferredUnit);
+                const convertedAmount = convertMeasurement(amount, sourceUnit, displayUnit) ?? amount;
 
-                const totalAmount = amount * quantity;
-                const totalCost = (totalAmount / baseAmount) * unitPrice;
+                const totalAmount = convertedAmount * quantity;
+                const key = `${food.id || name}-${displayUnit}`;
 
-                ingredientTotals[name] =
-                    (ingredientTotals[name] || 0) + totalAmount;
+                if (!ingredientTotals[key]) {
+                    ingredientTotals[key] = {
+                        label: name,
+                        unit: displayUnit,
+                        amount: 0,
+                        cost: 0,
+                        baseAmount: getDisplayBaseAmount(food, displayUnit),
+                        priceParts: []
+                    };
+                }
 
-                ingredientCosts[name] =
-                    (ingredientCosts[name] || 0) + totalCost;
+                const cost = calculateIngredientCost({
+                    food,
+                    sourceAmount: amount,
+                    sourceUnit,
+                    quantity
+                });
+
+                ingredientTotals[key].amount += totalAmount;
+                ingredientTotals[key].cost += cost;
+                ingredientTotals[key].priceParts.push({
+                    name,
+                    amount: totalAmount,
+                    unit: displayUnit,
+                    cost
+                });
             });
         });
 
-        const labels = Object.keys(ingredientTotals);
-
-        const quantityData = labels.map(n => ingredientTotals[n]);
-        const costData = labels.map(n => ingredientCosts[n]);
+        const ingredients = Object.values(ingredientTotals);
+        const labels = ingredients.map(item => `${item.label} (${item.unit})`);
+        const quantityData = ingredients.map(item => item.amount);
+        const totalCost = ingredients.reduce((sum, item) => sum + item.cost, 0);
+        const priceBreakdown = ingredients
+            .filter(item => item.cost > 0)
+            .map(item => `${item.label}: ${formatPrice(item.cost)} (${formatAmount(item.amount, item.unit)})`);
 
         summaryContainer.innerHTML = `
             <div>
@@ -586,9 +614,27 @@ export async function loadDashboardDrinkChart(listId) {
                 }</strong> drinks
             </div>
             <div class="small text-muted">
-                Ingredient usage overview
+                Ingredient amounts in ${escapeHtml(preferredUnit)} where possible
+            </div>
+            <div class="mt-2">
+                Estimated price:
+                <strong id="dashboardDrinkPrice" class="dashboard-price-hover" tabindex="0">
+                    ${escapeHtml(formatPrice(totalCost))}
+                </strong>
             </div>
         `;
+
+        bindPriceHover(priceBreakdown);
+
+        if (!ingredients.length) {
+            if (window.dashboardDrinkChart instanceof Chart) {
+                window.dashboardDrinkChart.destroy();
+            }
+
+            const ctx = chartCanvas.getContext('2d');
+            ctx?.clearRect(0, 0, chartCanvas.width, chartCanvas.height);
+            return;
+        }
 
         if (window.dashboardDrinkChart instanceof Chart) {
             window.dashboardDrinkChart.destroy();
@@ -602,24 +648,42 @@ export async function loadDashboardDrinkChart(listId) {
                 labels,
                 datasets: [
                     {
-                        label: 'Quantity',
-                        data: quantityData
-                    },
-                    {
-                        label: 'Cost (DKK)',
-                        data: costData
+                        label: 'Amount',
+                        data: quantityData,
+                        borderWidth: 1
                     }
                 ]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: context => {
+                                const item = ingredients[context.dataIndex];
+                                return `${item.label}: ${formatAmount(item.amount, item.unit)}`;
+                            }
+                        }
+                    },
+                    legend: {
+                        display: false
+                    },
+                    bottleSeparators: {
+                        ingredients
+                    }
+                },
                 scales: {
                     y: {
-                        beginAtZero: true
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Amount'
+                        }
                     }
                 }
-            }
+            },
+            plugins: [bottleSeparatorPlugin]
         });
 
     } catch (err) {
@@ -627,4 +691,104 @@ export async function loadDashboardDrinkChart(listId) {
         summaryContainer.innerHTML =
             '<div class="text-danger">Failed to load chart.</div>';
     }
+}
+
+const bottleSeparatorPlugin = {
+    id: 'bottleSeparators',
+    afterDatasetsDraw(chart, args, pluginOptions) {
+        const ingredients = pluginOptions.ingredients || [];
+        const meta = chart.getDatasetMeta(0);
+        const yScale = chart.scales.y;
+        const ctx = chart.ctx;
+
+        if (!meta?.data?.length || !yScale) return;
+
+        ctx.save();
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
+        ctx.lineWidth = 1;
+
+        meta.data.forEach((bar, index) => {
+            const ingredient = ingredients[index];
+            const step = ingredient?.baseAmount || getGeneralSeparatorStep(ingredient?.unit);
+            const amount = Number(ingredient?.amount || 0);
+
+            if (!step || step <= 0 || amount <= step) return;
+
+            for (let marker = step; marker < amount; marker += step) {
+                const y = yScale.getPixelForValue(marker);
+                const width = Math.max(10, bar.width || 24);
+
+                ctx.beginPath();
+                ctx.moveTo(bar.x - width / 2, y);
+                ctx.lineTo(bar.x + width / 2, y);
+                ctx.stroke();
+            }
+        });
+
+        ctx.restore();
+    }
+};
+
+function getDisplayBaseAmount(food, displayUnit) {
+    const baseAmount = Number(food?.base_amount || 0);
+    const baseUnit = food?.base_unit;
+
+    if (baseAmount > 0 && baseUnit) {
+        const converted = convertMeasurement(baseAmount, baseUnit, displayUnit);
+        if (converted !== null && converted > 0) {
+            return converted;
+        }
+    }
+
+    return getGeneralSeparatorStep(displayUnit);
+}
+
+function getGeneralSeparatorStep(unit) {
+    const normalizedUnit = String(unit || '').toLowerCase();
+    if (normalizedUnit === 'ml') return 1000;
+    if (normalizedUnit === 'cl') return 100;
+    if (normalizedUnit === 'l') return 1;
+    if (normalizedUnit === 'g') return 1000;
+    if (normalizedUnit === 'kg') return 1;
+    return null;
+}
+
+function calculateIngredientCost({
+    food,
+    sourceAmount,
+    sourceUnit,
+    quantity
+}) {
+    const price = Number(food?.price || 0);
+    const baseAmount = Number(food?.base_amount || 0);
+    const baseUnit = food?.base_unit;
+
+    if (!price || !baseAmount || !baseUnit) return 0;
+
+    const amountInBaseUnit = convertMeasurement(sourceAmount, sourceUnit, baseUnit);
+    if (amountInBaseUnit === null) return 0;
+
+    return (amountInBaseUnit * quantity / baseAmount) * price;
+}
+
+function bindPriceHover(priceBreakdown) {
+    const priceEl = document.getElementById('dashboardDrinkPrice');
+    if (!priceEl) return;
+
+    const lines = priceBreakdown.length
+        ? priceBreakdown
+        : ['No ingredient prices available yet.'];
+
+    priceEl.addEventListener('mouseenter', () => showHoverBox(priceEl, lines));
+    priceEl.addEventListener('mouseleave', hideHoverBox);
+    priceEl.addEventListener('focus', () => showHoverBox(priceEl, lines));
+    priceEl.addEventListener('blur', hideHoverBox);
+}
+
+function formatPrice(value) {
+    const number = Number(value || 0);
+    return `${number.toLocaleString(undefined, {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    })} DKK`;
 }

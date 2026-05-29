@@ -1,6 +1,11 @@
 
 import { getApiUrl } from "../../../config.js";
 import { escapeHtml } from "../../../utils.js";
+import {
+    getDailyTargetKcal,
+    getMacroTargets,
+    MAINTENANCE_RESULT_EVENT
+} from "./maintenance.js?v=20260529-macro-reference";
 
 let intakeSummary = null;
 
@@ -31,13 +36,19 @@ export async function loadDashboardIntakeSummary() {
     const carbs = data.total_carbs || 0;
     const fat = data.total_fat || 0;
     const total = data.total_calories || 0;
+    const target = getDailyTargetKcal();
 
     summaryContainer.innerHTML = `
-        <div><strong>${total.toFixed(0)} kcal</strong></div>
+        <div id="dashboardIntakeTargetSummary">
+            ${renderTargetComparison(total, target)}
+        </div>
         <div>Protein: ${protein.toFixed(1)} g</div>
         <div>Carbs: ${carbs.toFixed(1)} g</div>
         <div>Fat: ${fat.toFixed(1)} g</div>
         <div class="mt-2"><small>Entries: ${data.entries ?? 0}</small></div>
+        <div id="dashboardMacroBalanceSummary" class="mt-3">
+            ${renderMacroBalance({ protein, carbs, fat }, getMacroTargets())}
+        </div>
 
         <div id="todays-intake-container" class="mt-3"></div>
     `;
@@ -52,6 +63,97 @@ export async function loadDashboardIntakeSummary() {
     requestAnimationFrame(() => {
         renderTodaysIntake(chartData);
     });
+
+    window.addEventListener(MAINTENANCE_RESULT_EVENT, () => {
+        const targetSummary = document.getElementById("dashboardIntakeTargetSummary");
+        if (targetSummary) {
+            targetSummary.innerHTML = renderTargetComparison(total, getDailyTargetKcal());
+        }
+
+        const macroSummary = document.getElementById("dashboardMacroBalanceSummary");
+        if (macroSummary) {
+            macroSummary.innerHTML = renderMacroBalance({ protein, carbs, fat }, getMacroTargets());
+        }
+    });
+}
+
+function renderTargetComparison(total, target) {
+    const targetValue = Number(target || 0);
+    const percent = targetValue > 0 ? (total / targetValue) * 100 : 0;
+
+    return `
+        <div class="intake-target-row">
+            <div>
+                <span>Intake</span>
+                <strong>${total.toFixed(0)} kcal</strong>
+            </div>
+            <div>
+                <span>Target</span>
+                <strong>${targetValue > 0 ? `${targetValue.toFixed(0)} kcal` : "Not set"}</strong>
+            </div>
+            <div>
+                <span>Progress</span>
+                <strong>${targetValue > 0 ? `${percent.toFixed(0)}%` : "-"}</strong>
+            </div>
+        </div>
+    `;
+}
+
+function renderMacroBalance(intake, targets) {
+    if (!targets) {
+        return `
+            <div class="macro-balance-empty">
+                Calculate maintenance in Planning to show macro targets.
+            </div>
+        `;
+    }
+
+    const rows = [
+        {
+            key: "protein",
+            label: "Protein",
+            intake: intake.protein,
+            target: targets.protein?.grams || 0
+        },
+        {
+            key: "carbs",
+            label: "Carbs",
+            intake: intake.carbs,
+            target: targets.carbs?.grams || 0
+        },
+        {
+            key: "fat",
+            label: "Fat",
+            intake: intake.fat,
+            target: targets.fat?.grams || 0
+        }
+    ];
+
+    return `
+        <div class="macro-balance">
+            <div class="macro-balance-title">Nutritional balance</div>
+            ${rows.map(row => {
+                const progress = row.target > 0 ? (row.intake / row.target) * 100 : 0;
+                return `
+                    <div class="macro-balance-row">
+                        <span>${row.label}</span>
+                        <strong>${row.intake.toFixed(1)} g</strong>
+                        <strong>${row.target.toFixed(1)} g</strong>
+                        <strong>${progress.toFixed(0)}%</strong>
+                    </div>
+                `;
+            }).join("")}
+            <div class="macro-balance-header">
+                <span></span>
+                <span>Intake</span>
+                <span>Target</span>
+                <span>Progress</span>
+            </div>
+            <div class="macro-balance-reference">
+                National Academies: protein 10-35%, carbs 45-65%, fat 20-35%.
+            </div>
+        </div>
+    `;
 }
 
 

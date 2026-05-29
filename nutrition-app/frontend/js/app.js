@@ -1,7 +1,7 @@
 import { initConfig, updateApiUrlInput, setApiUrlFromInput, getApiUrl } from "./config.js";
 import { initUIEvents } from "./ui/events.js";
 import { initModals, showModalById } from "./modules/modals.js";
-import { renderRoute } from "./ui/renders.js";
+import { renderRoute } from "./ui/renders.js?v=20260529-macro-reference";
 
 import { loadNutrients, createNutrient, toggleNutrientEdit } from "./modules/nutrients.js";
 import { loadFoods, createFood, toggleFoodEdit } from "./modules/foods.js";
@@ -24,6 +24,7 @@ import {
     returnToSearchAfterCreate
 } from "./modules/search.js";
 import { scanBarcode, stopScanning } from "./modules/barcode/scanner.js";
+import { applySettings } from "./modules/settings.js";
 
 async function loadInitialData() {
     await Promise.all([
@@ -78,12 +79,13 @@ async function initApp() {
     try {
         await initConfig();
 
+        applySettings();
         updateApiUrlInput();
         initModals();
         initUIEvents();
 
         await loadInitialData();
-        await renderRoute("home");
+        await renderRoute(getInitialRoute());
 
         window.refreshAppData = refreshAppData;
         Object.assign(window, {
@@ -122,4 +124,12 @@ async function initApp() {
     }
 }
 
+function getInitialRoute() {
+    const route = window.location.hash.replace("#", "").trim();
+    return route || "home";
+}
+
 document.addEventListener("DOMContentLoaded", initApp);
+window.addEventListener("hashchange", () => {
+    renderRoute(getInitialRoute());
+});

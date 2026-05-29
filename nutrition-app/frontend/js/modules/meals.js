@@ -3,6 +3,7 @@ import { MealsAPI } from '../api/mealsAPI.js';
 import { escapeHtml } from '../utils.js';
 import { openFormModal } from '../ui/components/modal.js';
 import { openSearchDatabaseModal } from './search.js';
+import { renderUnitOptions } from './settings.js';
 
 let pendingMealFoodSelection = null;
 
@@ -230,9 +231,7 @@ function renderMealDetailsBody(data, edit) {
                 <div class="drink-ingredient-unit-control">
                     <label class="form-label mb-1" for="mealDetailUnit">Unit</label>
                     <select id="mealDetailUnit" class="form-select">
-                        <option value="g">g</option>
-                        <option value="ml">ml</option>
-                        <option value="cl">cl</option>
+                        ${renderUnitOptions(["cl", "ml", "g", "kg", "l"])}
                     </select>
                 </div>
                 <div class="drink-ingredient-add-control">
@@ -302,7 +301,7 @@ function renderMealItemRow(item, edit) {
                 </div>
                 <div class="drink-ingredient-unit-control">
                     <select class="form-select form-select-sm meal-item-unit">
-                        ${["g", "ml", "cl"].map(unit => `
+                        ${["cl", "ml", "g", "kg", "l"].map(unit => `
                             <option value="${unit}" ${item.unit === unit ? "selected" : ""}>${unit}</option>
                         `).join("")}
                     </select>
