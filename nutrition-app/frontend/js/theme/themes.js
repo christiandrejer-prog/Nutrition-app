@@ -1,10 +1,5 @@
+import { applySettings } from "../modules/settings.js";
 
-
-
-
-
-function applyStoredTheme() {
-    if (localStorage.getItem('app_dark_mode') === '1') {
-        document.body.classList.add('dark-mode');
-    }
+export function applyStoredTheme() {
+    applySettings();
 }

@@ -31,7 +31,15 @@ export function renderHomeOutput() {
                     <li> - Fix the add nutrients to food modal <strong><i>(W.I.P)</i></strong></li>
                     <li> - Update database to have more data <strong><i>(W.I.P)</i></strong></li>
                     <li> - Make a new sidebar section for maintenance calculations</li>
-                    <li> - Make settings placeholder options / buttons and also a way to save the state</li>
+                    <li> - Make settings placeholder options / buttons and also a way to save the state <strong><i>(Done - testing)</i></strong></li>
+                    <li> - Make it possible to change viewing measurements (ml / cl / and so on) <strong><i>(Done - testing)</i></strong></li>
+                    <li> - Add an extended details view for drinks - for kcal and price to make</li>
+                    <li> - Update the drinks graphs (To show pr liter or per full unit on y-axis. E.g. for vodka a full unit is 70 cl)</li>
+                    <li> - Find a better way to select a unit when adding a food to a meal. Now its 'cl' default - dosnt make sense for pasta for exampel. </li>
+                    <li> - Update 'Today's intake', 'Maintenance' and 'Activity' card to look better and more minimalistic. </li>
+                    <li> - Implement the 'Stock' tab in drinks dashboard</li>
+                    <li> - Implement the 'Shopping' tab in drinks dashboard</li>
+                    <li> - Add categories for everything in the database for easy filter based searching and later to work with preference recormendations</li>
                 </ul>
             </p>
         </div>
