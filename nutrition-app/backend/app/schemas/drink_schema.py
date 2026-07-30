@@ -1,15 +1,18 @@
 from typing import List, Optional
 from pydantic import BaseModel, Field
 from app.schemas.food_schema import FoodResponse
+from app.schemas.garnish_schema import DrinkGarnishResponse
 
 
 class DrinkCreate(BaseModel):
     name: str
+    instructions: Optional[str] = None
 
 
 class DrinkResponse(BaseModel):
     id: int
     name: str
+    instructions: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -41,6 +44,7 @@ class DrinkIngredientResponse(BaseModel):
 
 class DrinkDetailResponse(DrinkResponse):
     ingredients: List[DrinkIngredientResponse]
+    garnishes: List[DrinkGarnishResponse] = []
 
 
 class DrinkListCreate(BaseModel):

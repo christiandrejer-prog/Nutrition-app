@@ -12,6 +12,7 @@
 
 // Imports --- IN THE WORKS, DONT KNOW IF THIS IS NEEDED
 import { getApiUrl } from "./config.js";
+import { confirmAction } from "./ui/components/modal.js";
 
 // Exports --- IN THE WORKS, DONT KNOW IF THIS IS NEEDED
 
@@ -162,7 +163,7 @@ export async function deleteEntityByType(type, id) {
     const endpoint = getDatabaseEndpoint(type).replace(/\/$/, "");
     const label = type === "drink lists" ? "drink list" : type.slice(0, -1) || type;
 
-    if (!confirm(`Delete this ${label}?`)) return false;
+    if (!await confirmAction(`Delete this ${label}?`)) return false;
 
     const response = await fetch(`${getApiUrl()}/${endpoint}/${id}`, {
         method: "DELETE"

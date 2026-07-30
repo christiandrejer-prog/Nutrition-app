@@ -13,10 +13,13 @@ import {
     showFoodDetailsModal,
     showEditFoodMacrosModal,
     saveFoodMacros,
-    showModalById
+    showModalById,
+    goBackFromFoodDetails,
+    addFoodNutrientFromModal,
+    deleteFoodNutrientFromModal
 } from "../modules/modals.js";
 
-import { openSearchDatabaseModal } from "../modules/search.js";
+import { openSearchDatabaseModal, goBackFromSearchDatabase } from "../modules/search.js";
 import { renderRoute } from "./renders.js";
 import { selectDrinkListUI, addDrinkListItemUI, toggleDrinkListDeleteMode } from "../modules/drinks/dashboard/drinks-dashboard.js";
 import { addConsumedMealUI, toggleConsumedMealDeleteMode } from "../modules/meals/dashboard/consumedMeals.js";
@@ -32,6 +35,7 @@ export function initUIEvents() {
         const id = el.dataset.id;
 
         handleAction(action, id, e);
+        closeMobileMenuIfOpen(el);
     });
 
     document.addEventListener("keydown", (e) => {
@@ -49,6 +53,14 @@ export function initUIEvents() {
     }
 
 });
+}
+
+
+function closeMobileMenuIfOpen(el) {
+    const menu = el.closest("#mobileMenu");
+    if (!menu || typeof bootstrap === "undefined") return;
+
+    bootstrap.Offcanvas.getInstance(menu)?.hide();
 }
 
 
@@ -136,6 +148,24 @@ function handleAction(action, id, e) {
             case "food-save-macros":
                 saveFoodMacros(id);
                 break;
+
+            case "food-details-back":
+                goBackFromFoodDetails();
+                break;
+
+            case "search-database-back":
+                goBackFromSearchDatabase();
+                break;
+
+            case "food-add-nutrient":
+                addFoodNutrientFromModal(id);
+                break;
+
+            case "food-delete-nutrient": {
+                const el = e.target.closest("[data-action]");
+                deleteFoodNutrientFromModal(id, el?.dataset.nutrientId);
+                break;
+            }
 
             default:
                 console.info(`Not implemented: ${action}`);

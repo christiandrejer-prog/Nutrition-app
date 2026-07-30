@@ -4,6 +4,14 @@ import {
     loadDashboardDrinkChart
 } from "../../modules/drinks/dashboard/drinks-dashboard.js";
 import {
+    initStockDashboard,
+    renderStockCards
+} from "../../modules/drinks/dashboard/stock-dashboard.js";
+import {
+    initShoppingDashboard,
+    renderShoppingCards
+} from "../../modules/drinks/dashboard/shopping-dashboard.js";
+import {
     initDashboardTabs,
     renderDashboardTabs
 } from "../components/dashboard-tabs.js";
@@ -29,25 +37,13 @@ export async function renderDrinkDashboardOutput() {
                         id: "stock",
                         label: "Stock",
                         icon: "bi bi-box-seam",
-                        content: renderPlaceholderCards({
-                            titles: [
-                                "Stock Overview",
-                                "Available Drinks",
-                                "Missing Ingredients"
-                            ]
-                        })
+                        content: renderStockCards()
                     },
                     {
                         id: "shopping",
                         label: "Shopping",
                         icon: "bi bi-basket3",
-                        content: renderPlaceholderCards({
-                            titles: [
-                                "Shopping List",
-                                "Predicted Drinks",
-                                "Budget"
-                            ]
-                        })
+                        content: renderShoppingCards()
                     }
                 ]
             })}
@@ -58,6 +54,8 @@ export async function renderDrinkDashboardOutput() {
     await initDrinksDashboard();
     await loadDashboardDrinkListsItems();
     await loadDashboardDrinkChart();
+    await initStockDashboard();
+    await initShoppingDashboard();
     output.scrollIntoView({ behavior: 'smooth' });
 }
 
@@ -67,7 +65,12 @@ function renderDrinkPrepCards() {
             <div class="col-12 col-md-4">
                 <div class="card h-100 shadow-sm">
                     <div class="card-body">
-                        <h5 class="card-title">Prep Totals</h5>
+                        <div class="d-flex justify-content-between align-items-start">
+                            <h5 class="card-title">Prep Totals</h5>
+                            <button id="dashboardToggleStockBtn" class="btn btn-outline-secondary btn-sm flex-shrink-0" type="button" style="min-width: 7.5rem;">
+                                <i class="bi bi-box-seam me-1"></i>Show stock
+                            </button>
+                        </div>
                         <div id="dashboardDrinkSummary">
                             <p class="text-muted">Select a drink list to show totals.</p>
                         </div>
@@ -110,14 +113,13 @@ function renderDrinkPrepCards() {
             <div class="col-12 col-md-4">
                 <div class="card h-100 shadow-sm">
                     <div class="card-body">
-                        <h5 class="card-title">Garnish</h5>
-                        <p class="card-text">Placeholder for garnish planning and serving notes.</p>
-                        <div class="placeholder-glow">
-                            <span class="placeholder col-6"></span>
-                            <span class="placeholder col-8"></span>
-                            <span class="placeholder col-4"></span>
+                        <h5 class="card-title mb-2">Recipe</h5>
+                        <select id="recipeDrinkSelect" class="form-select form-select-sm mb-2">
+                            <option value="">Select a drink list first</option>
+                        </select>
+                        <div id="recipeSteps">
+                            <div class="text-muted small">Select a drink list to see recipes.</div>
                         </div>
-                        <p class="mt-3"><strong><i>(Future feature)</i></strong></p>
                     </div>
                 </div>
             </div>
@@ -125,25 +127,3 @@ function renderDrinkPrepCards() {
     `;
 }
 
-function renderPlaceholderCards({ titles }) {
-    return `
-        <div class="row g-3">
-            ${titles.map(title => `
-                <div class="col-12 col-md-4">
-                    <div class="card h-100 shadow-sm">
-                        <div class="card-body">
-                            <h5 class="card-title">${title}</h5>
-                            <p class="card-text text-muted">Placeholder for upcoming drinks planning tools.</p>
-                            <div class="placeholder-glow">
-                                <span class="placeholder col-7"></span>
-                                <span class="placeholder col-10"></span>
-                                <span class="placeholder col-5"></span>
-                            </div>
-                            <p class="mt-3"><strong><i>(Future feature)</i></strong></p>
-                        </div>
-                    </div>
-                </div>
-            `).join("")}
-        </div>
-    `;
-}

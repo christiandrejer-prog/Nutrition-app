@@ -5,9 +5,14 @@ from sqlalchemy.orm import Session, joinedload
 from app.database.session import get_db
 from app.models.drink import Drink
 from app.models.drink_ingredient import DrinkIngredient
+from app.models.drink_garnish import DrinkGarnish
+from app.models.garnish import Garnish
 from app.models.drink_list import DrinkList
 from app.models.drink_list_item import DrinkListItem
 from app.models.food import Food
+from app.models.food_nutrient import FoodNutrient
+from app.models.nutrient import Nutrient
+from app.utils.energy_constants import calculate_energy_from_macros
 from app.schemas.drink_schema import (
     DrinkCreate,
     DrinkResponse,
@@ -20,6 +25,11 @@ from app.schemas.drink_schema import (
     DrinkListDetailResponse,
     DrinkListItemCreate,
     DrinkListItemResponse,
+)
+from app.schemas.garnish_schema import (
+    DrinkGarnishCreate,
+    DrinkGarnishUpdate,
+    DrinkGarnishResponse,
 )
 
 router = APIRouter(tags=["Drinks"])
@@ -69,6 +79,8 @@ def update_drink(drink_id: int, data: DrinkCreate, db: Session = Depends(get_db)
         raise HTTPException(status_code=400, detail="Drink already exists")
 
     drink.name = data.name
+    if data.instructions is not None:
+        drink.instructions = data.instructions
     db.commit()
     db.refresh(drink)
 
@@ -83,6 +95,7 @@ def delete_drink(drink_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Drink not found")
 
     db.query(DrinkIngredient).filter(DrinkIngredient.drink_id == drink_id).delete()
+    db.query(DrinkGarnish).filter(DrinkGarnish.drink_id == drink_id).delete()
     db.delete(drink)
     db.commit()
 
@@ -93,6 +106,16 @@ def delete_drink(drink_id: int, db: Session = Depends(get_db)):
 @router.get("/", response_model=list[DrinkResponse])
 def get_drinks(db: Session = Depends(get_db)):
     return db.query(Drink).all()
+
+
+# Get all drinks with their ingredients (for stock/shopping computations)
+@router.get("/details", response_model=list[DrinkDetailResponse])
+def get_all_drink_details(db: Session = Depends(get_db)):
+    drinks = db.query(Drink).options(
+        joinedload(Drink.ingredients).joinedload(DrinkIngredient.food),
+        joinedload(Drink.garnishes).joinedload(DrinkGarnish.garnish).joinedload(Garnish.source_food),
+    ).all()
+    return drinks
 
 
 # Get drink details with ingredients
@@ -108,10 +131,71 @@ def get_drink(drink_id: int, db: Session = Depends(get_db)):
         .filter(DrinkIngredient.drink_id == drink_id)
         .all()
     )
+    garnishes = (
+        db.query(DrinkGarnish)
+        .options(joinedload(DrinkGarnish.garnish).joinedload(Garnish.source_food))
+        .filter(DrinkGarnish.drink_id == drink_id)
+        .all()
+    )
     return {
         "id": drink.id,
         "name": drink.name,
+        "instructions": drink.instructions,
         "ingredients": ingredients,
+        "garnishes": garnishes,
+    }
+
+
+# Get total macros for a drink, summed across its ingredients
+@router.get("/{drink_id}/macros")
+def get_drink_macros(drink_id: int, db: Session = Depends(get_db)):
+    drink = db.query(Drink).filter(Drink.id == drink_id).first()
+    if not drink:
+        raise HTTPException(status_code=404, detail="Drink not found")
+
+    ingredients = db.query(DrinkIngredient).filter(DrinkIngredient.drink_id == drink_id).all()
+
+    totals = {"protein": 0.0, "carbs": 0.0, "fat": 0.0}
+
+    for ingredient in ingredients:
+        try:
+            amount = float(ingredient.amount or 0)
+        except (TypeError, ValueError):
+            amount = 0
+
+        food_nutrients = db.query(FoodNutrient).filter(
+            FoodNutrient.food_id == ingredient.food_id
+        ).all()
+
+        for fn in food_nutrients:
+            nutrient = db.query(Nutrient).filter(Nutrient.id == fn.nutrient_id).first()
+            if not nutrient:
+                continue
+
+            # Same simplified scaling as meals: treat the ingredient amount as
+            # grams-equivalent regardless of unit (W.I.P. until proper unit
+            # conversion is in place).
+            scaled_amount = fn.amount_per_100g * (amount / 100)
+            name = nutrient.name.lower()
+
+            if "protein" in name:
+                totals["protein"] += scaled_amount
+            elif "carb" in name:
+                totals["carbs"] += scaled_amount
+            elif "fat" in name:
+                totals["fat"] += scaled_amount
+
+    totals["calories"] = round(calculate_energy_from_macros(totals), 1)
+
+    return {
+        "drink_id": drink_id,
+        "drink_name": drink.name,
+        "totals": {
+            "protein": round(totals["protein"], 1),
+            "carbs": round(totals["carbs"], 1),
+            "fat": round(totals["fat"], 1),
+            "calories": totals["calories"]
+        }
     }
 
 
@@ -197,6 +281,94 @@ def delete_drink_ingredient(
     return {"detail": f"Drink ingredient deleted {ingredient_id}"}
 
 
+# Add a garnish to a drink
+@router.post("/{drink_id}/garnishes", response_model=DrinkGarnishResponse)
+def add_drink_garnish(drink_id: int, data: DrinkGarnishCreate, db: Session = Depends(get_db)):
+    drink = db.query(Drink).filter(Drink.id == drink_id).first()
+    if not drink:
+        raise HTTPException(status_code=404, detail="Drink not found")
+
+    garnish = db.query(Garnish).filter(Garnish.id == data.garnish_id).first()
+    if not garnish:
+        raise HTTPException(status_code=404, detail="Garnish not found")
+
+    existing = db.query(DrinkGarnish).filter(
+        DrinkGarnish.drink_id == drink_id,
+        DrinkGarnish.garnish_id == data.garnish_id
+    ).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Garnish already exists for this drink")
+
+    essential = data.essential if data.essential is not None else garnish.default_essential
+
+    drink_garnish = DrinkGarnish(
+        drink_id=drink_id,
+        garnish_id=data.garnish_id,
+        quantity_per_serving=data.quantity_per_serving,
+        essential=essential,
+    )
+    db.add(drink_garnish)
+    db.commit()
+    db.refresh(drink_garnish)
+
+    return drink_garnish
+
+
+# Get all garnishes for a drink
+@router.get("/{drink_id}/garnishes", response_model=list[DrinkGarnishResponse])
+def get_drink_garnishes(drink_id: int, db: Session = Depends(get_db)):
+    drink = db.query(Drink).filter(Drink.id == drink_id).first()
+    if not drink:
+        raise HTTPException(status_code=404, detail="Drink not found")
+
+    return db.query(DrinkGarnish).options(
+        joinedload(DrinkGarnish.garnish).joinedload(Garnish.source_food)
+    ).filter(
+        DrinkGarnish.drink_id == drink_id
+    ).all()
+
+
+@router.put("/{drink_id}/garnishes/{garnish_id}", response_model=DrinkGarnishResponse)
+def update_drink_garnish(
+    drink_id: int,
+    garnish_id: int,
+    data: DrinkGarnishUpdate,
+    db: Session = Depends(get_db)
+):
+    drink_garnish = db.query(DrinkGarnish).filter(
+        DrinkGarnish.drink_id == drink_id,
+        DrinkGarnish.garnish_id == garnish_id
+    ).first()
+    if not drink_garnish:
+        raise HTTPException(status_code=404, detail="Drink garnish not found")
+
+    drink_garnish.quantity_per_serving = data.quantity_per_serving
+    drink_garnish.essential = data.essential
+    db.commit()
+    db.refresh(drink_garnish)
+
+    return drink_garnish
+
+
+@router.delete("/{drink_id}/garnishes/{garnish_id}")
+def delete_drink_garnish(
+    drink_id: int,
+    garnish_id: int,
+    db: Session = Depends(get_db)
+):
+    drink_garnish = db.query(DrinkGarnish).filter(
+        DrinkGarnish.drink_id == drink_id,
+        DrinkGarnish.garnish_id == garnish_id
+    ).first()
+    if not drink_garnish:
+        raise HTTPException(status_code=404, detail="Drink garnish not found")
+
+    db.delete(drink_garnish)
+    db.commit()
+
+    return {"detail": f"Drink garnish deleted {garnish_id}"}
+
+
 # Create a new drink list
 @router.post("/lists", response_model=DrinkListResponse)
 def create_drink_list(data: DrinkListCreate, db: Session = Depends(get_db)):
@@ -248,7 +420,12 @@ def get_drink_list(list_id: int, db: Session = Depends(get_db)):
             joinedload(DrinkList.items)
             .joinedload(DrinkListItem.drink)
             .joinedload(Drink.ingredients)
-            .joinedload(DrinkIngredient.food)
+            .joinedload(DrinkIngredient.food),
+            joinedload(DrinkList.items)
+            .joinedload(DrinkListItem.drink)
+            .joinedload(Drink.garnishes)
+            .joinedload(DrinkGarnish.garnish)
+            .joinedload(Garnish.source_food)
         )
         .filter(DrinkList.id == list_id)
         .first()

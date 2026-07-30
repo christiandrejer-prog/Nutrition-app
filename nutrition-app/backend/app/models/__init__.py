@@ -10,7 +10,9 @@ from .drink_ingredient import DrinkIngredient
 from .drink_list import DrinkList
 from .drink_list_item import DrinkListItem
 from .garnish import Garnish
+from .drink_garnish import DrinkGarnish
 from .intake_entry import IntakeEntry
+from .stock import Stock
 
 __all__ = [
     "Food",
@@ -25,5 +27,7 @@ __all__ = [
     "DrinkList",
     "DrinkListItem",
     "Garnish",
+    "DrinkGarnish",
     "IntakeEntry",
+    "Stock",
 ]

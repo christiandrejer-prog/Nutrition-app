@@ -22,7 +22,9 @@ from app.models import (
     drink_list,
     drink_list_item,
     garnish,
+    drink_garnish,
     intake_entry,
+    stock,
 )
 
 app = FastAPI()
@@ -45,12 +47,16 @@ from app.routes.users import router as users_router
 from app.routes.nutrition import router as nutrition_router
 from app.routes.drinks import router as drinks_router
 from app.routes.intake import router as intake_router
+from app.routes.stock import router as stock_router
+from app.routes.garnishes import router as garnishes_router
 
 app.include_router(meals_router, prefix="/meals", tags=["meals"])
 app.include_router(users_router, prefix="/users", tags=["users"])
 app.include_router(nutrition_router, prefix="/nutrition", tags=["nutrition"])
 app.include_router(drinks_router, prefix="/drinks", tags=["drinks"])
 app.include_router(intake_router, prefix="/intake", tags=["intake"])
+app.include_router(stock_router, prefix="/stock", tags=["stock"])
+app.include_router(garnishes_router, prefix="/garnishes", tags=["garnishes"])
 
 @app.on_event("startup")
 def on_startup():

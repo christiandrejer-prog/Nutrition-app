@@ -14,6 +14,8 @@
 import { setFoods, getState, setEditing, getNutrients } from '../state.js';
 import { FoodsAPI } from '../api/foodsAPI.js';
 import { escapeHtml } from '../utils.js';
+import { confirmAction } from '../ui/components/modal.js';
+import { showSaveSuccessToast } from '../ui/components/toast.js';
 
 // ======================================================
 // LOAD FOODS
@@ -127,6 +129,7 @@ export async function createFood() {
         });
 
         await loadFoods();
+        showSaveSuccessToast();
         return true;
     } catch (err) {
         alert("Error saving food: " + err.message);
@@ -167,6 +170,7 @@ export async function saveFood(foodId) {
         });
 
         await loadFoods();
+        showSaveSuccessToast();
     } catch (err) {
         alert("Error updating food: " + err.message);
     }
@@ -177,7 +181,7 @@ export async function saveFood(foodId) {
 // ======================================================
 
 export async function deleteFood(foodId) {
-    if (!confirm("Delete this food?")) return;
+    if (!await confirmAction("Delete this food?")) return;
 
     try {
         await FoodsAPI.delete(foodId);
@@ -189,7 +193,7 @@ export async function deleteFood(foodId) {
 
 
 export async function deleteFoodNutrient(foodId, nutrientId) {
-    if (!confirm("Delete this nutrient entry?")) return;
+    if (!await confirmAction("Delete this nutrient entry?")) return;
 
     try {
         await FoodsAPI.deleteNutrient(foodId, nutrientId);

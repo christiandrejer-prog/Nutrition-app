@@ -15,10 +15,11 @@ import {
     toggleDrinkListDeleteMode as toggleDrinkListDeleteModeState
 } from "../../drinks.js";
 import { openSearchDatabaseModal } from "../../search.js";
-import { closeAppModal, openFormModal } from "../../../ui/components/modal.js";
+import { closeAppModal, confirmAction, openFormModal } from "../../../ui/components/modal.js";
+import { showHoverBox, hideHoverBox } from "../../../ui/components/hoverBox.js";
 
 let selectedDrinkListId = null;
-let hoverBox = null;
+let recipeDrinksCache = [];
 
 export async function initDrinksDashboard() {
     await Promise.all([loadDrinks(), loadDrinkLists()]);
@@ -77,6 +78,8 @@ export async function loadDashboardDrinkListsItems(listId = selectedDrinkListId)
     }
 }
 
+let stockCountingEnabled = false;
+
 export async function loadDashboardDrinkChart(listId = selectedDrinkListId) {
     const summaryContainer = document.getElementById("dashboardDrinkSummary");
     const chartCanvas = document.getElementById("dashboardDrinkChart");
@@ -92,7 +95,7 @@ export async function loadDashboardDrinkChart(listId = selectedDrinkListId) {
         return;
     }
 
-    await renderDrinkChart(listId);
+    await renderDrinkChart(listId, { showStock: stockCountingEnabled });
 }
 
 function bindDashboardControls() {
@@ -101,6 +104,108 @@ function bindDashboardControls() {
     bindClick("dashboardCreateDrinkBtn", handleCreateDrink);
     bindClick("dashboardCreateDrinkListBtn", handleCreateDrinkList);
     bindClick("dashboardAddIngredientBtn", handleAddIngredient);
+    bindClick("dashboardToggleStockBtn", toggleStockCounting);
+
+    document.getElementById("recipeDrinkSelect")?.addEventListener("change", event => {
+        const drinkId = Number(event.target.value);
+        const drink = recipeDrinksCache.find(d => d.id === drinkId);
+        renderRecipeSteps(drink || null);
+    });
+}
+
+export async function refreshRecipeCard(listId = selectedDrinkListId) {
+    const select = document.getElementById("recipeDrinkSelect");
+    const stepsContainer = document.getElementById("recipeSteps");
+    if (!select || !stepsContainer) return;
+
+    if (!listId) {
+        recipeDrinksCache = [];
+        select.innerHTML = '<option value="">Select a drink list first</option>';
+        stepsContainer.innerHTML = '<div class="text-muted small">Select a drink list to see recipes.</div>';
+        return;
+    }
+
+    try {
+        const list = await DrinksAPI.getList(listId);
+        const uniqueDrinks = [];
+        const seen = new Set();
+
+        (list.items || []).forEach(item => {
+            if (item.drink && !seen.has(item.drink.id)) {
+                seen.add(item.drink.id);
+                uniqueDrinks.push(item.drink);
+            }
+        });
+
+        recipeDrinksCache = uniqueDrinks;
+
+        if (!uniqueDrinks.length) {
+            select.innerHTML = '<option value="">No drinks in this list yet</option>';
+            stepsContainer.innerHTML = '<div class="text-muted small">Add a drink to this list to see its recipe.</div>';
+            return;
+        }
+
+        const previousValue = select.value;
+        select.innerHTML = '<option value="">Select a drink</option>' +
+            uniqueDrinks.map(d => `<option value="${d.id}">${escapeHtml(d.name)}</option>`).join("");
+
+        if (previousValue && uniqueDrinks.some(d => String(d.id) === previousValue)) {
+            select.value = previousValue;
+            renderRecipeSteps(uniqueDrinks.find(d => String(d.id) === previousValue));
+        } else {
+            stepsContainer.innerHTML = '<div class="text-muted small">Select a drink to see its recipe.</div>';
+        }
+    } catch (error) {
+        stepsContainer.innerHTML = `<div class="text-danger small">${escapeHtml(error.message)}</div>`;
+    }
+}
+
+function renderRecipeSteps(drink) {
+    const stepsContainer = document.getElementById("recipeSteps");
+    if (!stepsContainer) return;
+
+    if (!drink) {
+        stepsContainer.innerHTML = '<div class="text-muted small">Select a drink to see its recipe.</div>';
+        return;
+    }
+
+    const steps = (drink.instructions || "").split("\n").map(s => s.trim()).filter(Boolean);
+
+    if (!steps.length) {
+        stepsContainer.innerHTML = `
+            <div class="text-muted small mb-2">No recipe steps added yet.</div>
+            <button class="btn btn-sm btn-outline-primary" id="recipeEditBtn" type="button">Add steps</button>
+        `;
+    } else {
+        stepsContainer.innerHTML = `
+            <ol class="ps-3 mb-2 small">
+                ${steps.map(step => `<li>${escapeHtml(step)}</li>`).join("")}
+            </ol>
+            <button class="btn btn-sm btn-outline-secondary" id="recipeEditBtn" type="button">Edit recipe</button>
+        `;
+    }
+
+    document.getElementById("recipeEditBtn")?.addEventListener("click", () => {
+        showDrinkDetailsModal(drink.id, {
+            edit: true,
+            onChanged: () => refreshRecipeCard(selectedDrinkListId)
+        });
+    });
+}
+
+async function toggleStockCounting() {
+    stockCountingEnabled = !stockCountingEnabled;
+
+    const btn = document.getElementById("dashboardToggleStockBtn");
+    if (btn) {
+        btn.innerHTML = stockCountingEnabled
+            ? '<i class="bi bi-box-seam me-1"></i>Hide stock'
+            : '<i class="bi bi-box-seam me-1"></i>Show stock';
+        btn.classList.toggle("btn-secondary", stockCountingEnabled);
+        btn.classList.toggle("btn-outline-secondary", !stockCountingEnabled);
+    }
+
+    await loadDashboardDrinkChart();
 }
 
 function bindClick(id, handler) {
@@ -114,6 +219,7 @@ async function selectDrinkList(listId) {
     setSelectedDrinkListId(listId);
     await loadDashboardDrinkListsItems(listId);
     await loadDashboardDrinkChart(listId);
+    await refreshRecipeCard(listId);
 }
 
 async function handleCreateDrink() {
@@ -177,6 +283,7 @@ async function refreshSelectedList() {
     if (selectedDrinkListId) {
         await loadDashboardDrinkListsItems(selectedDrinkListId);
         await loadDashboardDrinkChart(selectedDrinkListId);
+        await refreshRecipeCard(selectedDrinkListId);
     }
 }
 
@@ -257,7 +364,7 @@ function renderSelectedList(container, selectedList) {
 
         item.dataset.details = JSON.stringify({
             quantity: entry.quantity || 1,
-            ingredients: ingredientLines.length ? ingredientLines.join(", ") : "No ingredients added yet"
+            ingredients: ingredientLines.length ? ingredientLines : ["No ingredients added yet"]
         });
 
         if (getState().deleteModes.drinkList) {
@@ -267,6 +374,7 @@ function renderSelectedList(container, selectedList) {
             deleteButton.textContent = "x";
             deleteButton.addEventListener("click", async event => {
                 event.stopPropagation();
+                if (!await confirmAction(`Remove ${drink?.name || "this drink"} from the list?`)) return;
                 await DrinksAPI.deleteListItem(selectedList.id, entry.id);
                 await refreshSelectedList();
             });
@@ -288,26 +396,13 @@ function renderSelectedList(container, selectedList) {
 
 function showDrinkHover(event) {
     const data = JSON.parse(event.currentTarget.dataset.details);
+    const lines = [`Quantity: ${data.quantity}`, ...data.ingredients];
 
-    hoverBox = document.createElement("div");
-    hoverBox.className = "drink-hover-box";
-    hoverBox.innerHTML = `
-        <div><strong>Quantity:</strong> ${escapeHtml(String(data.quantity))}</div>
-        <div class="mt-1">${escapeHtml(data.ingredients)}</div>
-    `;
-
-    document.body.appendChild(hoverBox);
-
-    const rect = event.currentTarget.getBoundingClientRect();
-    hoverBox.style.left = `${rect.left}px`;
-    hoverBox.style.top = `${rect.bottom + 10}px`;
+    showHoverBox(event.currentTarget, lines);
 }
 
 function hideDrinkHover() {
-    if (hoverBox) {
-        hoverBox.remove();
-        hoverBox = null;
-    }
+    hideHoverBox();
 }
 
 export function toggleDrinkListDeleteMode() {

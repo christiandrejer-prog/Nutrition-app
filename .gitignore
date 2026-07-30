@@ -1,0 +1,11 @@
+# Python bytecode cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Local Claude Code dev-server config (hardcoded to this machine's paths)
+.claude/
+
+# Local dev-server launch scripts (hardcoded to this machine's paths)
+nutrition-app/backend/dev-server.bat
+nutrition-app/frontend/dev-server.bat
