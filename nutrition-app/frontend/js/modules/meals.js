@@ -1,11 +1,28 @@
 import { setMeals, getState, setEditing } from '../state.js';
 import { MealsAPI } from '../api/mealsAPI.js';
 import { escapeHtml } from '../utils.js';
-import { openFormModal } from '../ui/components/modal.js';
+import { openFormModal, confirmAction, closeAppModal } from '../ui/components/modal.js';
+import { showSaveSuccessToast } from '../ui/components/toast.js';
 import { openSearchDatabaseModal } from './search.js';
 import { renderUnitOptions } from './settings.js';
 
 let pendingMealFoodSelection = null;
+// Not reset on the shared modal's 'hidden.bs.modal' event: that event also
+// fires when a nested modal (e.g. the ingredient search) briefly hides this
+// modal to show itself, which would otherwise wipe this out mid-flow.
+// Cleared explicitly by goBackFromMealDetails() instead.
+let mealDetailsBackHandler = null;
+
+export function goBackFromMealDetails() {
+    const handler = mealDetailsBackHandler;
+    mealDetailsBackHandler = null;
+
+    if (typeof handler === 'function') {
+        handler();
+    } else {
+        closeAppModal();
+    }
+}
 
 export async function loadMeals() {
     const mealList = document.getElementById("mealList");
@@ -83,6 +100,7 @@ export async function createMeal() {
         if (modalInput) modalInput.value = "";
 
         await loadMeals();
+        showSaveSuccessToast();
         return true;
     } catch (err) {
         alert("Error creating meal: " + err.message);
@@ -91,7 +109,7 @@ export async function createMeal() {
 }
 
 export async function deleteMeal(mealId) {
-    if (!confirm("Delete this meal?")) return;
+    if (!await confirmAction("Delete this meal?")) return;
 
     try {
         await MealsAPI.delete(mealId);
@@ -146,6 +164,7 @@ export async function saveMeal(mealId) {
     try {
         await MealsAPI.update(mealId, { name });
         await loadMeals();
+        showSaveSuccessToast();
     } catch (err) {
         alert("Error updating meal: " + err.message);
     }
@@ -156,21 +175,27 @@ export async function loadMealDetails(mealId = document.getElementById("mealSele
     await showMealDetailsModal(mealId);
 }
 
-export async function showMealDetailsModal(mealId, { edit = false, onChanged } = {}) {
+export async function showMealDetailsModal(mealId, { edit = false, onChanged, onBack } = {}) {
+    if (onBack !== undefined) {
+        mealDetailsBackHandler = onBack;
+    }
+
     try {
         const data = await MealsAPI.getDetailed(mealId);
 
         openFormModal({
             title: data.meal_name || "Meal",
             submitLabel: edit ? "Done" : "Edit",
-            cancelLabel: edit ? "Back" : "Close",
+            cancelLabel: "Back",
             size: "modal-lg",
             body: renderMealDetailsBody(data, edit),
             onCancel: edit
                 ? async () => {
                     await showMealDetailsModal(mealId, { edit: false, onChanged });
                 }
-                : undefined,
+                : async () => {
+                    goBackFromMealDetails();
+                },
             onHidden: undefined,
             onSubmit: async () => {
                 if (!edit) {
@@ -202,7 +227,7 @@ export async function showMealDetailsModal(mealId, { edit = false, onChanged } =
 function renderMealDetailsBody(data, edit) {
     const totals = data.totals || {};
     const summary = `
-        <div class="border rounded p-3 mb-3 bg-light">
+        <div class="macro-summary mb-3">
             <div><strong>Calories:</strong> ${escapeHtml(String(totals.calories ?? 0))} kcal</div>
             <div><strong>Protein:</strong> ${escapeHtml(String(totals.protein ?? 0))} g</div>
             <div><strong>Carbs:</strong> ${escapeHtml(String(totals.carbs ?? 0))} g</div>
@@ -332,13 +357,14 @@ function bindMealDetailsEditActions(mealId, onChanged) {
                 await MealsAPI.updateItem(mealId, itemId, { amount, unit });
                 await onChanged?.();
                 await showMealDetailsModal(mealId, { edit: true, onChanged });
+                showSaveSuccessToast();
             } catch (error) {
                 alert("Unable to update meal item: " + error.message);
             }
         });
 
         row.querySelector(".meal-item-delete")?.addEventListener("click", async () => {
-            if (!confirm("Delete this meal item?")) return;
+            if (!await confirmAction("Delete this meal item?")) return;
 
             try {
                 await MealsAPI.deleteItem(mealId, itemId);
@@ -369,6 +395,9 @@ function bindMealDetailsEditActions(mealId, onChanged) {
                     food,
                     onChanged
                 };
+                await showMealDetailsModal(mealId, { edit: true, onChanged });
+            },
+            onBack: async () => {
                 await showMealDetailsModal(mealId, { edit: true, onChanged });
             }
         });
@@ -412,6 +441,7 @@ function bindMealDetailsEditActions(mealId, onChanged) {
             };
             await onChanged?.();
             await showMealDetailsModal(mealId, { edit: true, onChanged });
+            showSaveSuccessToast();
         } catch (error) {
             alert("Unable to add food: " + error.message);
         }

@@ -38,10 +38,33 @@ const databaseSearchState = {
     mode: "browse",
     lockedType: null,
     selectLabel: "Select",
-    onSelect: null
+    onSelect: null,
+    onBack: null
 };
 
 let pendingSearchReturn = null;
+let searchModalBackListenerAttached = false;
+
+function attachSearchModalBackReset() {
+    const modal = document.getElementById('modalSearchDatabase');
+    if (!modal || searchModalBackListenerAttached) return;
+    searchModalBackListenerAttached = true;
+    modal.addEventListener('hidden.bs.modal', () => {
+        databaseSearchState.onBack = null;
+    });
+}
+
+export async function goBackFromSearchDatabase() {
+    const onBack = databaseSearchState.onBack;
+    databaseSearchState.onBack = null;
+
+    await closeSearchModal();
+    resetSearchMode();
+
+    if (typeof onBack === 'function') {
+        await onBack();
+    }
+}
 
 export function setDatabaseSearchType(type) {
     if (
@@ -81,16 +104,21 @@ export async function openSearchDatabaseModal(searchType, options = {}) {
     databaseSearchState.lockedType = databaseSearchState.mode === "select" ? searchType : null;
     databaseSearchState.selectLabel = options.selectLabel || "Select";
     databaseSearchState.onSelect = typeof options.onSelect === "function" ? options.onSelect : null;
+    databaseSearchState.onBack = typeof options.onBack === "function" ? options.onBack : null;
     setDatabaseSearchType(searchType);
     queryField.value = '';
-    results.innerHTML = `
-        <div class="alert alert-secondary">
-            ${databaseSearchState.mode === "select"
-                ? "Search, then choose the item you want to use."
-                : "Type a search term and press Search to query the backend."}
-        </div>
-    `;
+    attachSearchModalBackReset();
     showModalById('modalSearchDatabase');
+
+    if (databaseSearchState.mode === "select") {
+        await doSearchDatabase();
+    } else {
+        results.innerHTML = `
+            <div class="alert alert-secondary">
+                Type a search term and press Search to query the backend.
+            </div>
+        `;
+    }
 }
 
 
@@ -667,20 +695,29 @@ function openViewSearchItem({
 
 
 async function openViewSearchFood(foodId) {
+    const searchReturn = getCurrentSearchReturn();
     await closeSearchModal();
-    await showFoodDetailsModal(foodId);
+    await showFoodDetailsModal(foodId, {
+        onBack: () => returnToSearchState(searchReturn)
+    });
 }
 
 
 async function openViewSearchMeal(mealId) {
+    const searchReturn = getCurrentSearchReturn();
     await closeSearchModal();
-    await showMealDetailsModal(mealId);
+    await showMealDetailsModal(mealId, {
+        onBack: () => returnToSearchState(searchReturn)
+    });
 }
 
 
 async function openViewSearchDrink(drinkId) {
+    const searchReturn = getCurrentSearchReturn();
     await closeSearchModal();
-    await showDrinkDetailsModal(drinkId);
+    await showDrinkDetailsModal(drinkId, {
+        onBack: () => returnToSearchState(searchReturn)
+    });
 }
 
 function resetSearchMode() {
@@ -688,6 +725,7 @@ function resetSearchMode() {
     databaseSearchState.lockedType = null;
     databaseSearchState.selectLabel = "Select";
     databaseSearchState.onSelect = null;
+    databaseSearchState.onBack = null;
     document.querySelectorAll('#databaseSearchTypeButtons [data-search-type]').forEach(btn => {
         btn.disabled = false;
     });
@@ -695,8 +733,11 @@ function resetSearchMode() {
 
 
 async function openViewSearchDrinkList(drinkListId) {
+    const searchReturn = getCurrentSearchReturn();
     await closeSearchModal();
-    await showDrinkListDetailsModal(drinkListId);
+    await showDrinkListDetailsModal(drinkListId, {
+        onBack: () => returnToSearchState(searchReturn)
+    });
 }
 
 

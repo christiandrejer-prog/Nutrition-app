@@ -13,6 +13,7 @@ from app.models.drink_ingredient import DrinkIngredient
 from app.models.drink_list import DrinkList
 from app.models.drink_list_item import DrinkListItem
 from app.models.garnish import Garnish
+from app.models.drink_garnish import DrinkGarnish
 from app.models.intake_entry import IntakeEntry
 
 
@@ -99,31 +100,184 @@ FOODS = [
     {"name": "Mint", "brand": "Generic", "price": 15, "base_amount": 30, "base_unit": "g", "protein": 3.8, "carbs": 14.9, "fat": 0.9, "fiber": 8.0},
     {"name": "Espresso", "brand": "Generic", "price": 3.5, "base_amount": 100, "base_unit": "ml", "protein": 0.1, "carbs": 0.0, "fat": 0.0, "caffeine": 65.0},
     {"name": "Egg Whites", "brand": "Generic", "price": 30, "base_amount": 1000, "base_unit": "g", "protein": 10.9, "carbs": 0.7, "fat": 0.2},
+    {"name": "Dry Vermouth", "brand": "Generic", "price": 85, "base_amount": 750, "base_unit": "ml", "protein": 0.0, "carbs": 3.0, "fat": 0.0, "alcohol": 18.0},
+    {"name": "Angostura Bitters", "brand": "Generic", "price": 95, "base_amount": 200, "base_unit": "ml", "protein": 0.0, "carbs": 5.0, "fat": 0.0, "alcohol": 44.7},
+    {"name": "Amaretto", "brand": "Generic", "price": 150, "base_amount": 700, "base_unit": "ml", "protein": 0.0, "carbs": 28.0, "fat": 0.0, "alcohol": 28.0},
+    {"name": "Baileys Irish Cream", "brand": "Generic", "price": 160, "base_amount": 700, "base_unit": "ml", "protein": 1.5, "carbs": 17.0, "fat": 11.0, "alcohol": 17.0},
+    {"name": "Flode 38%", "brand": "Generic DK", "price": 20, "base_amount": 250, "base_unit": "ml", "protein": 2.1, "carbs": 3.0, "fat": 38.0},
+    {"name": "Rom mork 40%", "brand": "Generic", "price": 165, "base_amount": 700, "base_unit": "ml", "protein": 0.0, "carbs": 0.0, "fat": 0.0, "alcohol": 40.0},
+    {"name": "Grenadine", "brand": "Generic", "price": 45, "base_amount": 500, "base_unit": "ml", "protein": 0.0, "carbs": 65.0, "fat": 0.0},
+    {"name": "Blue Curacao", "brand": "Generic", "price": 130, "base_amount": 700, "base_unit": "ml", "protein": 0.0, "carbs": 30.0, "fat": 0.0, "alcohol": 20.0},
+    {"name": "Peach Schnapps", "brand": "Generic", "price": 130, "base_amount": 700, "base_unit": "ml", "protein": 0.0, "carbs": 20.0, "fat": 0.0, "alcohol": 20.0},
+    {"name": "Grapefruit Juice", "brand": "Generic", "price": 22, "base_amount": 1000, "base_unit": "ml", "protein": 0.5, "carbs": 8.0, "fat": 0.1},
+    {"name": "Aperol", "brand": "Generic", "price": 140, "base_amount": 700, "base_unit": "ml", "protein": 0.0, "carbs": 26.0, "fat": 0.0, "alcohol": 11.0},
+    {"name": "Coconut Cream", "brand": "Generic", "price": 22, "base_amount": 400, "base_unit": "ml", "protein": 1.9, "carbs": 7.0, "fat": 20.0},
+    # Garnish source items - also usable directly in the Meal Dashboard
+    {"name": "Lime", "brand": "Generic", "price": 3.5, "base_amount": 1, "base_unit": "piece"},
+    {"name": "Lemon", "brand": "Generic", "price": 3, "base_amount": 1, "base_unit": "piece"},
+    {"name": "Mint bunch", "brand": "Generic", "price": 18, "base_amount": 1, "base_unit": "piece"},
+    {"name": "Orange", "brand": "Generic", "price": 4, "base_amount": 1, "base_unit": "piece"},
+    {"name": "Cherry jar", "brand": "Generic", "price": 32, "base_amount": 1, "base_unit": "piece"},
+    {"name": "Olive jar", "brand": "Generic", "price": 28, "base_amount": 1, "base_unit": "piece"},
+]
+
+
+GARNISHES = [
+    {"name": "Lime wedge", "source_food": "Lime", "unit_name": "piece", "yield_per_source": 8, "default_essential": False},
+    {"name": "Lemon twist", "source_food": "Lemon", "unit_name": "piece", "yield_per_source": 8, "default_essential": False},
+    {"name": "Mint sprig", "source_food": "Mint bunch", "unit_name": "piece", "yield_per_source": 20, "default_essential": False},
+    {"name": "Orange slice", "source_food": "Orange", "unit_name": "piece", "yield_per_source": 8, "default_essential": False},
+    {"name": "Cherry", "source_food": "Cherry jar", "unit_name": "piece", "yield_per_source": 25, "default_essential": False},
+    {"name": "Olive", "source_food": "Olive jar", "unit_name": "piece", "yield_per_source": 30, "default_essential": False},
 ]
 
 
 DRINKS = [
-    {"name": "Screwdriver", "ingredients": [("Vodka 40%", 40, "ml"), ("Orange Juice", 120, "ml")]},
-    {"name": "Gin and Tonic", "ingredients": [("Gin 40%", 50, "ml"), ("Tonic Water", 150, "ml"), ("Lime Juice", 5, "ml")]},
-    {"name": "Moscow Mule", "ingredients": [("Vodka 40%", 50, "ml"), ("Ginger Beer", 150, "ml"), ("Lime Juice", 15, "ml")]},
-    {"name": "Mojito", "ingredients": [("Rom lys 37.5%", 50, "ml"), ("Lime Juice", 25, "ml"), ("Sugar Syrup", 20, "ml"), ("Danskvand", 100, "ml"), ("Mint", 2, "g")]},
-    {"name": "Margarita", "ingredients": [("Tequila 38%", 50, "ml"), ("Triple sec 40%", 25, "ml"), ("Lime Juice", 25, "ml")]},
-    {"name": "Cosmopolitan", "ingredients": [("Vodka 40%", 40, "ml"), ("Triple sec 40%", 15, "ml"), ("Cranberry Juice", 30, "ml"), ("Lime Juice", 15, "ml")]},
-    {"name": "Espresso Martini", "ingredients": [("Vodka 40%", 40, "ml"), ("Kahlua", 20, "ml"), ("Espresso", 30, "ml"), ("Sugar Syrup", 10, "ml")]},
-    {"name": "Whisky Sour", "ingredients": [("Whisky 40%", 50, "ml"), ("Lemon Juice", 25, "ml"), ("Sugar Syrup", 20, "ml"), ("Egg Whites", 20, "g")]},
-    {"name": "Daiquiri", "ingredients": [("Rom lys 37.5%", 50, "ml"), ("Lime Juice", 25, "ml"), ("Sugar Syrup", 15, "ml")]},
-    {"name": "Negroni", "ingredients": [("Gin 40%", 30, "ml"), ("Campari", 30, "ml"), ("Sweet vermouth", 30, "ml")]},
-    {"name": "Aperol Spritz", "ingredients": [("Prosecco", 90, "ml"), ("Danskvand", 30, "ml")]},
-    {"name": "Cuba Libre", "ingredients": [("Rom lys 37.5%", 50, "ml"), ("Cola", 120, "ml"), ("Lime Juice", 10, "ml")]},
-    {"name": "Tequila Sunrise", "ingredients": [("Tequila 38%", 50, "ml"), ("Orange Juice", 120, "ml")]},
-    {"name": "Vodka Cranberry", "ingredients": [("Vodka 40%", 40, "ml"), ("Cranberry Juice", 120, "ml"), ("Lime Juice", 10, "ml")]},
-    {"name": "Pina Colada Simple", "ingredients": [("Rom lys 37.5%", 50, "ml"), ("Pineapple Juice", 120, "ml"), ("Sugar Syrup", 15, "ml")]},
+    {"name": "Screwdriver", "ingredients": [("Vodka 40%", 40, "ml"), ("Orange Juice", 120, "ml")],
+     "instructions": "Chill a highball glass with ice.\nPour 4cl vodka over ice.\nTop with orange juice.\nStir gently and serve."},
+    {"name": "Gin and Tonic", "ingredients": [("Gin 40%", 50, "ml"), ("Tonic Water", 150, "ml"), ("Lime Juice", 5, "ml")],
+     "instructions": "Fill a highball glass with ice.\nPour 5cl gin over the ice.\nTop with tonic water.\nAdd a squeeze of lime juice and stir gently."},
+    {"name": "Moscow Mule", "ingredients": [("Vodka 40%", 50, "ml"), ("Ginger Beer", 150, "ml"), ("Lime Juice", 15, "ml")],
+     "instructions": "Fill a copper mug or highball glass with ice.\nAdd vodka and lime juice.\nTop with ginger beer.\nStir gently and serve."},
+    {"name": "Mojito", "ingredients": [("Rom lys 37.5%", 50, "ml"), ("Lime Juice", 25, "ml"), ("Sugar Syrup", 20, "ml"), ("Danskvand", 100, "ml"), ("Mint", 2, "g")],
+     "instructions": "Muddle mint leaves gently with sugar syrup and lime juice in a highball glass.\nFill the glass with crushed ice.\nAdd rum and stir well.\nTop with soda water and stir again.\nGarnish with a mint sprig."},
+    {"name": "Margarita", "ingredients": [("Tequila 38%", 50, "ml"), ("Triple sec 40%", 25, "ml"), ("Lime Juice", 25, "ml")],
+     "instructions": "Rim a rocks glass with salt (optional).\nShake tequila, triple sec, and lime juice with ice.\nStrain into the glass over fresh ice.\nGarnish with a lime wedge."},
+    {"name": "Cosmopolitan", "ingredients": [("Vodka 40%", 40, "ml"), ("Triple sec 40%", 15, "ml"), ("Cranberry Juice", 30, "ml"), ("Lime Juice", 15, "ml")],
+     "instructions": "Shake all ingredients with ice until well chilled.\nDouble strain into a chilled martini glass.\nGarnish with a lime wheel or twist."},
+    {"name": "Espresso Martini", "ingredients": [("Vodka 40%", 40, "ml"), ("Kahlua", 20, "ml"), ("Espresso", 30, "ml"), ("Sugar Syrup", 10, "ml")],
+     "instructions": "Brew a fresh shot of espresso and let it cool slightly.\nShake vodka, Kahlua, espresso, and sugar syrup hard with ice.\nDouble strain into a chilled martini glass.\nServe promptly while the foam is fresh."},
+    {"name": "Whisky Sour", "ingredients": [("Whisky 40%", 50, "ml"), ("Lemon Juice", 25, "ml"), ("Sugar Syrup", 20, "ml"), ("Egg Whites", 20, "g")],
+     "instructions": "Dry shake whisky, lemon juice, sugar syrup, and egg white (no ice) to build foam.\nAdd ice and shake again until chilled.\nStrain into a rocks glass over fresh ice.\nGarnish with a cherry."},
+    {"name": "Daiquiri", "ingredients": [("Rom lys 37.5%", 50, "ml"), ("Lime Juice", 25, "ml"), ("Sugar Syrup", 15, "ml")],
+     "instructions": "Shake rum, lime juice, and sugar syrup hard with ice.\nDouble strain into a chilled coupe glass.\nGarnish with a lime wheel."},
+    {"name": "Negroni", "ingredients": [("Gin 40%", 30, "ml"), ("Campari", 30, "ml"), ("Sweet vermouth", 30, "ml")],
+     "instructions": "Fill a rocks glass with ice.\nAdd gin, Campari, and sweet vermouth.\nStir gently until chilled.\nGarnish with an orange slice."},
+    {"name": "Aperol Spritz", "ingredients": [("Prosecco", 90, "ml"), ("Aperol", 60, "ml"), ("Danskvand", 30, "ml")],
+     "instructions": "Fill a wine glass with ice.\nPour prosecco, then Aperol.\nTop with a splash of soda water.\nStir gently and garnish with an orange slice."},
+    {"name": "Cuba Libre", "ingredients": [("Rom lys 37.5%", 50, "ml"), ("Cola", 120, "ml"), ("Lime Juice", 10, "ml")],
+     "instructions": "Fill a highball glass with ice.\nAdd rum and lime juice.\nTop with cola and stir gently.\nGarnish with a lime wedge."},
+    {"name": "Tequila Sunrise", "ingredients": [("Tequila 38%", 50, "ml"), ("Orange Juice", 120, "ml"), ("Grenadine", 10, "ml")],
+     "instructions": "Fill a highball glass with ice.\nPour tequila and orange juice, and stir.\nSlowly pour grenadine down the side of the glass so it settles at the bottom.\nGarnish with a cherry - do not stir, to keep the sunrise effect."},
+    {"name": "Vodka Cranberry", "ingredients": [("Vodka 40%", 40, "ml"), ("Cranberry Juice", 120, "ml"), ("Lime Juice", 10, "ml")],
+     "instructions": "Fill a highball glass with ice.\nAdd vodka, cranberry juice, and lime juice.\nStir gently and garnish with a lime wedge."},
+    {"name": "Pina Colada Simple", "ingredients": [("Rom lys 37.5%", 50, "ml"), ("Pineapple Juice", 120, "ml"), ("Sugar Syrup", 15, "ml")],
+     "instructions": "Blend rum, pineapple juice, and sugar syrup with a cup of ice until smooth.\nPour into a hurricane glass.\nGarnish with a cherry."},
+    {"name": "Martini", "ingredients": [("Gin 40%", 60, "ml"), ("Dry Vermouth", 10, "ml")],
+     "instructions": "Stir gin and dry vermouth with ice until very cold.\nStrain into a chilled martini glass.\nGarnish with an olive (or a lemon twist for a dry martini)."},
+    {"name": "Manhattan", "ingredients": [("Whisky 40%", 60, "ml"), ("Sweet vermouth", 20, "ml"), ("Angostura Bitters", 2, "ml")],
+     "instructions": "Stir whisky, sweet vermouth, and bitters with ice until well chilled.\nStrain into a chilled coupe glass.\nGarnish with a cherry."},
+    {"name": "Old Fashioned", "ingredients": [("Whisky 40%", 60, "ml"), ("Sugar Syrup", 10, "ml"), ("Angostura Bitters", 2, "ml")],
+     "instructions": "Add sugar syrup and bitters to a rocks glass.\nAdd whisky and one large ice cube.\nStir until well chilled.\nGarnish with an orange slice and a cherry."},
+    {"name": "White Russian", "ingredients": [("Vodka 40%", 50, "ml"), ("Kahlua", 20, "ml"), ("Flode 38%", 20, "ml")],
+     "instructions": "Fill a rocks glass with ice.\nAdd vodka and Kahlua, stir.\nGently float the cream on top by pouring over the back of a spoon.\nServe without stirring further."},
+    {"name": "Black Russian", "ingredients": [("Vodka 40%", 50, "ml"), ("Kahlua", 20, "ml")],
+     "instructions": "Fill a rocks glass with ice.\nAdd vodka and Kahlua.\nStir gently and serve."},
+    {"name": "Amaretto Sour", "ingredients": [("Amaretto", 45, "ml"), ("Lemon Juice", 25, "ml"), ("Sugar Syrup", 10, "ml"), ("Egg Whites", 15, "g")],
+     "instructions": "Dry shake amaretto, lemon juice, sugar syrup, and egg white (no ice) to build foam.\nAdd ice and shake again until chilled.\nStrain into a rocks glass over fresh ice.\nGarnish with a cherry."},
+    {"name": "Godfather", "ingredients": [("Whisky 40%", 45, "ml"), ("Amaretto", 15, "ml")],
+     "instructions": "Fill a rocks glass with ice.\nAdd whisky and amaretto.\nStir gently and serve."},
+    {"name": "Mai Tai", "ingredients": [("Rom lys 37.5%", 30, "ml"), ("Rom mork 40%", 30, "ml"), ("Triple sec 40%", 15, "ml"), ("Lime Juice", 25, "ml"), ("Sugar Syrup", 10, "ml")],
+     "instructions": "Shake light rum, triple sec, lime juice, and sugar syrup with ice.\nStrain into a rocks glass filled with crushed ice.\nFloat the dark rum on top.\nGarnish with a mint sprig."},
+    {"name": "Dark 'n Stormy", "ingredients": [("Rom mork 40%", 50, "ml"), ("Ginger Beer", 120, "ml"), ("Lime Juice", 5, "ml")],
+     "instructions": "Fill a highball glass with ice.\nAdd lime juice and top with ginger beer.\nFloat the dark rum on top by pouring slowly over a spoon.\nGarnish with a lime wedge."},
+    {"name": "Zombie", "ingredients": [("Rom lys 37.5%", 30, "ml"), ("Rom mork 40%", 30, "ml"), ("Triple sec 40%", 15, "ml"), ("Lime Juice", 20, "ml"), ("Pineapple Juice", 30, "ml"), ("Sugar Syrup", 10, "ml")],
+     "instructions": "Shake all ingredients hard with ice.\nStrain into a hurricane glass filled with crushed ice.\nGarnish with a mint sprig."},
+    {"name": "Sex on the Beach", "ingredients": [("Vodka 40%", 40, "ml"), ("Peach Schnapps", 20, "ml"), ("Cranberry Juice", 40, "ml"), ("Orange Juice", 40, "ml")],
+     "instructions": "Fill a highball glass with ice.\nAdd vodka and peach schnapps.\nTop with cranberry juice and orange juice.\nStir gently and garnish with an orange slice."},
+    {"name": "Fuzzy Navel", "ingredients": [("Peach Schnapps", 45, "ml"), ("Orange Juice", 90, "ml")],
+     "instructions": "Fill a highball glass with ice.\nAdd peach schnapps and top with orange juice.\nStir gently and serve."},
+    {"name": "Blue Lagoon", "ingredients": [("Vodka 40%", 40, "ml"), ("Blue Curacao", 20, "ml"), ("Sodavand lemon-lime", 90, "ml")],
+     "instructions": "Fill a highball glass with ice.\nAdd vodka and blue curacao.\nTop with lemon-lime soda and stir gently.\nGarnish with a cherry."},
+    {"name": "Long Island Iced Tea", "ingredients": [("Vodka 40%", 15, "ml"), ("Gin 40%", 15, "ml"), ("Rom lys 37.5%", 15, "ml"), ("Tequila 38%", 15, "ml"), ("Triple sec 40%", 15, "ml"), ("Lemon Juice", 25, "ml"), ("Cola", 30, "ml")],
+     "instructions": "Fill a highball glass with ice.\nAdd vodka, gin, rum, tequila, triple sec, and lemon juice.\nStir gently and top with a splash of cola for color.\nGarnish with a lemon twist."},
+    {"name": "Mimosa", "ingredients": [("Prosecco", 75, "ml"), ("Orange Juice", 75, "ml")],
+     "instructions": "Pour chilled prosecco into a champagne flute.\nTop with an equal amount of chilled orange juice.\nStir very gently and serve immediately."},
+    {"name": "French 75", "ingredients": [("Gin 40%", 30, "ml"), ("Lemon Juice", 15, "ml"), ("Sugar Syrup", 10, "ml"), ("Prosecco", 60, "ml")],
+     "instructions": "Shake gin, lemon juice, and sugar syrup with ice.\nStrain into a champagne flute.\nTop with prosecco.\nGarnish with a lemon twist."},
+    {"name": "Paloma", "ingredients": [("Tequila 38%", 50, "ml"), ("Grapefruit Juice", 90, "ml"), ("Danskvand", 30, "ml"), ("Lime Juice", 10, "ml")],
+     "instructions": "Fill a highball glass with ice.\nAdd tequila, grapefruit juice, and lime juice.\nTop with soda water and stir gently.\nGarnish with a lime wedge."},
+    {"name": "Salty Dog", "ingredients": [("Vodka 40%", 50, "ml"), ("Grapefruit Juice", 120, "ml")],
+     "instructions": "Rim a highball glass with salt (optional).\nFill the glass with ice.\nAdd vodka and top with grapefruit juice.\nStir gently and serve."},
+    {"name": "Sea Breeze", "ingredients": [("Vodka 40%", 40, "ml"), ("Cranberry Juice", 80, "ml"), ("Grapefruit Juice", 40, "ml")],
+     "instructions": "Fill a highball glass with ice.\nAdd vodka, cranberry juice, and grapefruit juice.\nStir gently and garnish with a lime wedge."},
+    {"name": "Tom Collins", "ingredients": [("Gin 40%", 45, "ml"), ("Lemon Juice", 25, "ml"), ("Sugar Syrup", 15, "ml"), ("Danskvand", 90, "ml")],
+     "instructions": "Shake gin, lemon juice, and sugar syrup with ice.\nStrain into a highball glass filled with ice.\nTop with soda water and stir gently.\nGarnish with a cherry and a lemon twist."},
+    # Maritime / nautical theme - rum-forward, tiki, and sailor's classics
+    {"name": "Painkiller", "ingredients": [("Rom mork 40%", 60, "ml"), ("Pineapple Juice", 120, "ml"), ("Orange Juice", 30, "ml"), ("Coconut Cream", 30, "ml")],
+     "instructions": "Shake all ingredients hard with ice.\nStrain into a hurricane glass filled with crushed ice.\nGarnish with an orange slice."},
+    {"name": "Navy Grog", "ingredients": [("Rom mork 40%", 30, "ml"), ("Rom lys 37.5%", 30, "ml"), ("Lime Juice", 15, "ml"), ("Grapefruit Juice", 30, "ml"), ("Sugar Syrup", 15, "ml")],
+     "instructions": "Shake all ingredients hard with ice.\nStrain into a rocks glass filled with crushed ice.\nGarnish with a lime wedge."},
+    {"name": "Hurricane", "ingredients": [("Rom lys 37.5%", 30, "ml"), ("Rom mork 40%", 30, "ml"), ("Orange Juice", 30, "ml"), ("Pineapple Juice", 30, "ml"), ("Lime Juice", 15, "ml"), ("Grenadine", 15, "ml"), ("Sugar Syrup", 10, "ml")],
+     "instructions": "Shake all ingredients hard with ice.\nStrain into a hurricane glass filled with ice.\nGarnish with a cherry and an orange slice."},
+    {"name": "Rum Runner", "ingredients": [("Rom lys 37.5%", 30, "ml"), ("Rom mork 40%", 15, "ml"), ("Pineapple Juice", 60, "ml"), ("Orange Juice", 30, "ml"), ("Grenadine", 15, "ml"), ("Lime Juice", 15, "ml")],
+     "instructions": "Shake all ingredients hard with ice.\nStrain into a hurricane glass filled with crushed ice.\nGarnish with a cherry."},
+    {"name": "Bahama Mama", "ingredients": [("Rom lys 37.5%", 30, "ml"), ("Rom mork 40%", 15, "ml"), ("Kahlua", 15, "ml"), ("Pineapple Juice", 60, "ml"), ("Orange Juice", 30, "ml"), ("Grenadine", 10, "ml")],
+     "instructions": "Shake all ingredients hard with ice.\nStrain into a hurricane glass filled with crushed ice.\nGarnish with a cherry and an orange slice."},
+    {"name": "Blue Hawaiian", "ingredients": [("Rom lys 37.5%", 45, "ml"), ("Blue Curacao", 30, "ml"), ("Pineapple Juice", 90, "ml"), ("Coconut Cream", 30, "ml")],
+     "instructions": "Blend all ingredients with a cup of ice until smooth.\nPour into a hurricane glass.\nGarnish with a cherry."},
 ]
+
+
+# (garnish_name, quantity_per_serving, essential) per drink. Essential means the
+# drink isn't considered makeable without it (e.g. muddled mint in a Mojito);
+# everything else is a decorative, overridable-by-toggle garnish.
+DRINK_GARNISHES = {
+    "Screwdriver": [("Orange slice", 1, False)],
+    "Gin and Tonic": [("Lime wedge", 1, False)],
+    "Moscow Mule": [("Lime wedge", 1, False)],
+    "Mojito": [("Mint sprig", 1, True)],
+    "Margarita": [("Lime wedge", 1, False)],
+    "Cosmopolitan": [("Lime wedge", 1, False)],
+    "Whisky Sour": [("Cherry", 1, False)],
+    "Daiquiri": [("Lime wedge", 1, False)],
+    "Negroni": [("Orange slice", 1, False)],
+    "Aperol Spritz": [("Orange slice", 1, False)],
+    "Cuba Libre": [("Lime wedge", 1, False)],
+    "Tequila Sunrise": [("Cherry", 1, False)],
+    "Vodka Cranberry": [("Lime wedge", 1, False)],
+    "Pina Colada Simple": [("Cherry", 1, False)],
+    "Martini": [("Olive", 1, False)],
+    "Manhattan": [("Cherry", 1, False)],
+    "Old Fashioned": [("Orange slice", 1, False), ("Cherry", 1, False)],
+    "Amaretto Sour": [("Cherry", 1, False)],
+    "Mai Tai": [("Mint sprig", 1, False)],
+    "Dark 'n Stormy": [("Lime wedge", 1, False)],
+    "Zombie": [("Mint sprig", 1, False)],
+    "Sex on the Beach": [("Orange slice", 1, False)],
+    "Blue Lagoon": [("Cherry", 1, False)],
+    "Long Island Iced Tea": [("Lemon twist", 1, False)],
+    "Mimosa": [("Orange slice", 1, False)],
+    "French 75": [("Lemon twist", 1, False)],
+    "Paloma": [("Lime wedge", 1, False)],
+    "Sea Breeze": [("Lime wedge", 1, False)],
+    "Tom Collins": [("Cherry", 1, False), ("Lemon twist", 1, False)],
+    "Painkiller": [("Orange slice", 1, False)],
+    "Navy Grog": [("Lime wedge", 1, False)],
+    "Hurricane": [("Cherry", 1, False), ("Orange slice", 1, False)],
+    "Rum Runner": [("Cherry", 1, False)],
+    "Bahama Mama": [("Cherry", 1, False), ("Orange slice", 1, False)],
+    "Blue Hawaiian": [("Cherry", 1, False)],
+}
 
 
 DRINK_LISTS = [
     {"name": "Starter Cocktail Party", "items": [("Gin and Tonic", 6), ("Moscow Mule", 6), ("Margarita", 6), ("Espresso Martini", 4)]},
     {"name": "Vodka Classics", "items": [("Screwdriver", 6), ("Cosmopolitan", 6), ("Vodka Cranberry", 6), ("Espresso Martini", 4)]},
+    {"name": "Maritime Party", "items": [
+        ("Dark 'n Stormy", 6),
+        ("Sea Breeze", 6),
+        ("Blue Lagoon", 6),
+        ("Salty Dog", 6),
+        ("Mai Tai", 6),
+        ("Zombie", 6),
+        ("Painkiller", 6),
+        ("Navy Grog", 6),
+        ("Hurricane", 6),
+        ("Rum Runner", 6),
+        ("Bahama Mama", 6),
+        ("Blue Hawaiian", 6),
+    ]},
 ]
 
 
@@ -179,14 +333,15 @@ def set_food_nutrients(session, food, data, nutrients_by_name):
         link.amount_per_100g = amount
 
 
-def get_or_create_drink(session, name):
+def get_or_create_drink(session, name, instructions=None):
     drink = session.query(Drink).filter(Drink.name == name).first()
-    if drink:
-        return drink
+    if not drink:
+        drink = Drink(name=name)
+        session.add(drink)
+        session.flush()
 
-    drink = Drink(name=name)
-    session.add(drink)
-    session.flush()
+    if instructions is not None:
+        drink.instructions = instructions
     return drink
 
 
@@ -246,6 +401,43 @@ def set_drink_list_items(session, drink_list, items, drinks_by_name):
         session.delete(extra)
 
 
+def get_or_create_garnish(session, data, foods_by_name):
+    garnish = session.query(Garnish).filter(Garnish.name == data["name"]).first()
+    if not garnish:
+        garnish = Garnish(name=data["name"])
+        session.add(garnish)
+        session.flush()
+
+    garnish.source_food_id = foods_by_name[data["source_food"]].id
+    garnish.unit_name = data["unit_name"]
+    garnish.yield_per_source = data["yield_per_source"]
+    garnish.default_essential = data["default_essential"]
+    return garnish
+
+
+def set_drink_garnishes(session, drink, assignments, garnishes_by_name):
+    wanted_garnish_ids = []
+    for garnish_name, quantity_per_serving, essential in assignments:
+        garnish = garnishes_by_name[garnish_name]
+        wanted_garnish_ids.append(garnish.id)
+        item = session.query(DrinkGarnish).filter(
+            DrinkGarnish.drink_id == drink.id,
+            DrinkGarnish.garnish_id == garnish.id,
+        ).first()
+        if not item:
+            item = DrinkGarnish(drink_id=drink.id, garnish_id=garnish.id)
+            session.add(item)
+        item.quantity_per_serving = quantity_per_serving
+        item.essential = essential
+
+    extras = session.query(DrinkGarnish).filter(
+        DrinkGarnish.drink_id == drink.id,
+        ~DrinkGarnish.garnish_id.in_(wanted_garnish_ids),
+    ).all()
+    for extra in extras:
+        session.delete(extra)
+
+
 def seed_starter_database():
     session = SessionLocal()
     try:
@@ -264,7 +456,7 @@ def seed_starter_database():
 
         drinks_by_name = {}
         for drink_data in DRINKS:
-            drink = get_or_create_drink(session, drink_data["name"])
+            drink = get_or_create_drink(session, drink_data["name"], drink_data.get("instructions"))
             set_drink_ingredients(session, drink, drink_data["ingredients"], foods_by_name)
             drinks_by_name[drink.name] = drink
         session.commit()
@@ -272,6 +464,17 @@ def seed_starter_database():
         for list_data in DRINK_LISTS:
             drink_list = get_or_create_drink_list(session, list_data["name"])
             set_drink_list_items(session, drink_list, list_data["items"], drinks_by_name)
+        session.commit()
+
+        garnishes_by_name = {}
+        for garnish_data in GARNISHES:
+            garnish = get_or_create_garnish(session, garnish_data, foods_by_name)
+            garnishes_by_name[garnish.name] = garnish
+        session.commit()
+
+        for drink_name, assignments in DRINK_GARNISHES.items():
+            drink = drinks_by_name[drink_name]
+            set_drink_garnishes(session, drink, assignments, garnishes_by_name)
         session.commit()
 
         if not session.query(Meal).filter(Meal.name == "Starter Danish Breakfast").first():
@@ -284,13 +487,6 @@ def seed_starter_database():
                 ("Skyr naturel", 150, "g"),
             ]:
                 session.add(MealItem(meal_id=breakfast.id, food_id=foods_by_name[food_name].id, amount=amount, unit=unit))
-
-        if not session.query(Garnish).filter(Garnish.name == "Lime wedge").first():
-            session.add_all([
-                Garnish(name="Lime wedge"),
-                Garnish(name="Lemon twist"),
-                Garnish(name="Mint sprig"),
-            ])
 
         if not session.query(IntakeEntry).first():
             meal = session.query(Meal).filter(Meal.name == "Starter Danish Breakfast").first()

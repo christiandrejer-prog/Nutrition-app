@@ -156,6 +156,10 @@ export function getSelectedDrinkListItems() {
     return state.selectedDrinkListItems;
 }
 
+export function getSelectedDrinkListId() {
+    return state.selectedDrinkListId;
+}
+
 // ======================================================
 // EDITING + FLAGS
 // ======================================================

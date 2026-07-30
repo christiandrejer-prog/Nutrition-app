@@ -14,6 +14,8 @@
 import { setNutrients, getState, setEditing } from '../state.js';
 import { NutrientsAPI } from '../api/nutrientsAPI.js';
 import { escapeHtml } from '../utils.js';
+import { confirmAction } from '../ui/components/modal.js';
+import { showSaveSuccessToast } from '../ui/components/toast.js';
 
 // ======================================================
 // CREATE
@@ -51,6 +53,7 @@ export async function createNutrient() {
         if (modalUnit) modalUnit.value = "";
 
         await loadNutrients();
+        showSaveSuccessToast();
         return true;
 
     } catch (err) {
@@ -191,6 +194,7 @@ export async function saveNutrient(nutrientId) {
     try {
         await NutrientsAPI.update(nutrientId, { name, unit });
         await loadNutrients();
+        showSaveSuccessToast();
 
     } catch (err) {
         alert("Error updating nutrient: " + err.message);
@@ -202,7 +206,7 @@ export async function saveNutrient(nutrientId) {
 // ======================================================
 
 export async function deleteNutrient(nutrientId) {
-    if (!confirm("Delete this nutrient?")) return;
+    if (!await confirmAction("Delete this nutrient?")) return;
 
     try {
         await NutrientsAPI.delete(nutrientId);
