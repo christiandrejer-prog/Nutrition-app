@@ -1,7 +1,7 @@
 import { initConfig, updateApiUrlInput, setApiUrlFromInput, getApiUrl } from "./config.js";
 import { initUIEvents } from "./ui/events.js";
 import { initModals, showModalById } from "./modules/modals.js";
-import { renderRoute } from "./ui/renders.js?v=20260529-macro-reference";
+import { renderRoute } from "./ui/renders.js";
 
 import { loadNutrients, createNutrient, toggleNutrientEdit } from "./modules/nutrients.js";
 import { loadFoods, createFood, toggleFoodEdit } from "./modules/foods.js";

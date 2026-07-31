@@ -74,6 +74,30 @@ function renderSettingControl(setting, value) {
         `;
     }
 
+    if (setting.type === "number") {
+        return `
+            <div class="settings-row settings-row-select">
+                <div>
+                    <label class="fw-semibold" for="setting-${escapeHtml(setting.key)}">
+                        ${escapeHtml(setting.label)}
+                    </label>
+                    <div class="text-muted small">${escapeHtml(setting.description || "")}</div>
+                </div>
+                <input
+                    class="form-control form-control-sm settings-control"
+                    type="number"
+                    id="setting-${escapeHtml(setting.key)}"
+                    data-setting-key="${escapeHtml(setting.key)}"
+                    value="${escapeHtml(String(value ?? setting.defaultValue ?? 0))}"
+                    min="${escapeHtml(String(setting.min ?? 0))}"
+                    max="${escapeHtml(String(setting.max ?? 100000))}"
+                    step="${escapeHtml(String(setting.step ?? 1))}"
+                    style="max-width: 8rem;"
+                >
+            </div>
+        `;
+    }
+
     if (setting.type === "select") {
         return `
             <div class="settings-row settings-row-select">
@@ -105,9 +129,13 @@ function bindSettingsControls() {
     document.querySelectorAll(".settings-control").forEach(control => {
         control.addEventListener("change", event => {
             const key = event.currentTarget.dataset.settingKey;
-            const value = event.currentTarget.type === "checkbox"
-                ? event.currentTarget.checked
-                : event.currentTarget.value;
+            let value = event.currentTarget.value;
+
+            if (event.currentTarget.type === "checkbox") {
+                value = event.currentTarget.checked;
+            } else if (event.currentTarget.type === "number") {
+                value = Number(event.currentTarget.value) || 0;
+            }
 
             saveSetting(key, value);
         });

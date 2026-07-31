@@ -51,7 +51,7 @@ export function initMaintenanceCalculator() {
     const savedResult = getSavedMaintenanceResult();
     if (savedResult) {
         renderMaintenanceResult(savedResult);
-        updateDailyTargetSummary(savedResult);
+        updateEnergyTargetSummary(savedResult);
     }
 }
 
@@ -145,7 +145,7 @@ async function calculateMaintenance() {
 
         saveMaintenanceResult(data);
         renderMaintenanceResult(data);
-        updateDailyTargetSummary(data);
+        updateEnergyTargetSummary(data);
         window.dispatchEvent(new CustomEvent(MAINTENANCE_RESULT_EVENT, { detail: data }));
     } catch (error) {
         result.innerHTML = `
@@ -205,7 +205,7 @@ function renderMaintenanceResult(data) {
         <div class="small text-muted mt-2">
             Living: ${formatKcal(data.baseline_living_kcal_per_day)} / day |
             Activity: ${formatKcal(data.total_activity_kcal_per_week ?? data.scheduled_activity_kcal_per_week)} / week |
-            Protein TEF: ${formatKcal(data.protein_thermic_effect_kcal_per_day)} / day
+            TEF: ${formatKcal(data.thermic_effect_kcal_per_day)} / day
         </div>
 
         <div class="maintenance-breakdown mt-3">
@@ -229,8 +229,13 @@ function renderMaintenanceResult(data) {
                 ${formatKcal(data.scheduled_activity_kcal_per_week)} scheduled + ${formatKcal(data.direct_activity_kcal_per_week)} direct / week
             </div>
             <div class="maintenance-breakdown-row">
-                <span>Protein digestion</span>
-                <strong>${formatKcal(data.protein_thermic_effect_kcal_per_day)} / day</strong>
+                <span>Digestion (TEF)</span>
+                <strong>${formatKcal(data.thermic_effect_kcal_per_day)} / day</strong>
+            </div>
+            <div class="maintenance-breakdown-note">
+                ${data.thermic_effect_source === "logged_history"
+                    ? `From your logged intake (last ${data.thermic_effect_window_days} days)`
+                    : "From manual protein input - log meals for a few days to switch to real data"}
             </div>
             <div class="maintenance-breakdown-row">
                 <span>Goal adjustment</span>
@@ -252,12 +257,12 @@ function renderMaintenanceResult(data) {
     `;
 }
 
-export function initDailyTargetSummary() {
+export function initEnergyTargetSummary() {
     const savedResult = getSavedMaintenanceResult();
-    updateDailyTargetSummary(savedResult);
+    updateEnergyTargetSummary(savedResult);
 
     window.addEventListener(MAINTENANCE_RESULT_EVENT, event => {
-        updateDailyTargetSummary(event.detail);
+        updateEnergyTargetSummary(event.detail);
     });
 }
 
@@ -265,16 +270,24 @@ export function getDailyTargetKcal() {
     return Number(getSavedMaintenanceResult()?.daily_target_kcal || 0);
 }
 
+export function getDailyMaintenanceKcal() {
+    return Number(getSavedMaintenanceResult()?.daily_maintenance_kcal || 0);
+}
+
 export function getMacroTargets() {
     return getSavedMaintenanceResult()?.macro_targets || null;
 }
 
-function updateDailyTargetSummary(data) {
-    const summary = document.getElementById("dailyTargetSummary");
+export function getMaintenanceResult() {
+    return getSavedMaintenanceResult();
+}
+
+function updateEnergyTargetSummary(data) {
+    const summary = document.getElementById("energyTargetSummary");
     if (!summary) return;
 
     if (!data) {
-        summary.innerHTML = `<p class="text-muted mb-0">Use the Planning tab to calculate maintenance and daily target.</p>`;
+        summary.innerHTML = `<p class="text-muted mb-0">Use the Planning tab to calculate maintenance and energy target.</p>`;
         return;
     }
 
@@ -293,8 +306,8 @@ function updateDailyTargetSummary(data) {
                 <strong>${formatKcal(data.weekly_target_kcal)}</strong>
             </div>
             <div>
-                <span>Protein TEF</span>
-                <strong>${formatKcal(data.protein_thermic_effect_kcal_per_day)}</strong>
+                <span>TEF</span>
+                <strong>${formatKcal(data.thermic_effect_kcal_per_day)}</strong>
             </div>
         </div>
     `;

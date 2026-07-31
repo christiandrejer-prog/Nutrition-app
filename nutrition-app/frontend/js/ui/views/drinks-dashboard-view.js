@@ -99,7 +99,7 @@ function renderDrinkPrepCards() {
                             <div class="btn-group btn-group-sm" role="group">
                                 <button id="dashboardCreateDrinkListBtn" class="btn btn-outline-success" type="button">New list</button>
                                 <button id="dashboardCreateDrinkBtn" class="btn btn-outline-success" type="button">New drink</button>
-                                <button class="btn btn-outline-danger" type="button" id="toggle-remove-drink-btn" data-action="toggle-drink-list-delete-mode">Delete</button>
+                                <button class="btn btn-outline-danger" type="button" id="toggle-remove-drink-btn" data-action="toggle-drink-list-delete-mode">Remove drinks list</button>
                             </div>
                         </div>
 

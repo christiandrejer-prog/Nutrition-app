@@ -56,10 +56,21 @@ export const SETTINGS_DEFINITIONS = [
     },
     {
         key: "calorieConfidence",
-        label: "95% calorie confidence interval",
-        description: "Placeholder for showing calorie uncertainty in summaries.",
+        label: "Show energy target confidence interval",
+        description: "Shade an uncertainty band around the energy target line in Meal Dashboard charts.",
         type: "toggle",
         defaultValue: false,
+        section: "Nutrition"
+    },
+    {
+        key: "confidenceIntervalKcal",
+        label: "Confidence interval width",
+        description: "± kcal shown around your energy target when the interval is on.",
+        type: "number",
+        min: 0,
+        max: 2000,
+        step: 25,
+        defaultValue: 200,
         section: "Nutrition"
     },
     {

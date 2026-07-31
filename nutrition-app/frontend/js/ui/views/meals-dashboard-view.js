@@ -3,7 +3,7 @@
 
 // ###########################################################
 
-import { loadDashboardIntakeSummary } from "../../modules/meals/dashboard/intake.js?v=20260529-target-placement";
+import { loadDashboardIntakeSummary } from "../../modules/meals/dashboard/intake.js";
 import {
     initMealsDashboard,
     loadDashboardConsumedMeals
@@ -14,9 +14,12 @@ import {
     renderDashboardTabs
 } from "../components/dashboard-tabs.js";
 import {
-    initDailyTargetSummary,
+    initEnergyTargetSummary,
     initMaintenanceCalculator
-} from "../../modules/meals/dashboard/maintenance.js?v=20260529-macro-reference";
+} from "../../modules/meals/dashboard/maintenance.js";
+import { initEnergyTargetChart } from "../../modules/meals/dashboard/energy-target-chart.js";
+import { initWeightLog } from "../../modules/meals/dashboard/weight-log.js";
+import { initHistoryTab } from "../../modules/meals/dashboard/history.js";
 
 export async function renderMealDashboardOutput() {
     const output = document.getElementById('appOutputSection');
@@ -38,20 +41,7 @@ export async function renderMealDashboardOutput() {
                         id: "history",
                         label: "History",
                         icon: "bi bi-graph-up",
-                        content: renderPlaceholderCards([
-                            {
-                                title: "Kcal History",
-                                text: "Weekly and monthly kcal graph with a 95% confidence interval around logged intake."
-                            },
-                            {
-                                title: "Goal Balance",
-                                text: "Summary of intake against maintenance and selected weight goal."
-                            },
-                            {
-                                title: "Macro Trend",
-                                text: "Placeholder for protein, carbs, and fat trends over time."
-                            }
-                        ])
+                        content: renderHistoryCards()
                     },
                     {
                         id: "planning",
@@ -66,7 +56,10 @@ export async function renderMealDashboardOutput() {
 
     initDashboardTabs(output);
     initMaintenanceCalculator();
-    initDailyTargetSummary();
+    initEnergyTargetSummary();
+    initEnergyTargetChart();
+    initWeightLog();
+    initHistoryTab();
     await loadDashboardIntakeSummary();
     await initMealsDashboard();
     await loadDashboardConsumedMeals();
@@ -138,9 +131,24 @@ function renderTodayCards() {
             <div class="col-12 col-md-4">
                 <div class="card h-100 shadow-sm">
                     <div class="card-body">
-                        <h5 class="card-title">Daily Target</h5>
-                        <div id="dailyTargetSummary">
-                            <p class="text-muted mb-0">Use the Planning tab to calculate maintenance and daily target.</p>
+                        <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+                            <h5 class="card-title mb-0">Energy Target</h5>
+                            <div class="btn-group btn-group-sm" role="group">
+                                <button id="energyTargetDailyBtn" class="btn btn-outline-primary active" type="button">Daily</button>
+                                <button id="energyTargetWeeklyBtn" class="btn btn-outline-primary" type="button">Weekly</button>
+                            </div>
+                        </div>
+                        <div id="energyTargetSummary" class="mt-2">
+                            <p class="text-muted mb-0">Use the Planning tab to calculate maintenance and energy target.</p>
+                        </div>
+                        <div class="form-check form-switch mt-2 mb-0">
+                            <input class="form-check-input" type="checkbox" id="energyTargetConfidenceToggle">
+                            <label class="form-check-label small" for="energyTargetConfidenceToggle">
+                                Show confidence interval
+                            </label>
+                        </div>
+                        <div class="mt-2 dashboard-chart-shell">
+                            <canvas id="energyTargetChart" width="350" height="220"></canvas>
                         </div>
                     </div>
                 </div>
@@ -156,6 +164,16 @@ function renderPlanningCards() {
                 <div class="card h-100 shadow-sm" id="dashboardMaintenanceCard">
                     <div class="card-body">
                         <h5 class="card-title">Maintenance</h5>
+                        <div id="weightLogWidget" class="weight-log-widget mb-3">
+                            <label class="form-label small mb-1">Log today's weight</label>
+                            <div class="d-flex gap-2">
+                                <input id="weightLogInput" class="form-control form-control-sm" type="number" min="1" max="500" step="0.1" placeholder="kg">
+                                <button id="weightLogBtn" class="btn btn-outline-primary btn-sm flex-shrink-0" type="button">Log</button>
+                            </div>
+                            <div id="weightLogList" class="mt-2">
+                                <div class="text-muted small">Loading weight history...</div>
+                            </div>
+                        </div>
                         <div class="maintenance-form">
                             <div class="row g-2">
                                 <div class="col-6">
@@ -251,25 +269,57 @@ function renderPlanningCards() {
     `;
 }
 
-function renderPlaceholderCards(cards) {
+function renderHistoryCards() {
     return `
         <div class="row g-3">
-            ${cards.map(card => `
-                <div class="col-12 col-md-4">
-                    <div class="card h-100 shadow-sm">
-                        <div class="card-body">
-                            <h5 class="card-title">${card.title}</h5>
-                            <p class="card-text text-muted">${card.text}</p>
-                            <div class="placeholder-glow">
-                                <span class="placeholder col-7"></span>
-                                <span class="placeholder col-10"></span>
-                                <span class="placeholder col-5"></span>
-                            </div>
-                            <p class="mt-3"><strong><i>(Future feature)</i></strong></p>
+            <div class="col-12 col-md-4">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-body">
+                        <h5 class="card-title">Energy Balance</h5>
+                        <p class="card-text text-muted small mb-2">
+                            Rolling 7-day average intake vs. maintenance - a surplus one day and a deficit the
+                            next cancel out here, instead of being judged day by day.
+                        </p>
+                        <div id="energyBalanceText">
+                            <p class="text-muted mb-0">Loading...</p>
+                        </div>
+                        <div class="mt-3 dashboard-chart-shell">
+                            <canvas id="energyBalanceChart" width="350" height="220"></canvas>
                         </div>
                     </div>
                 </div>
-            `).join("")}
+            </div>
+
+            <div class="col-12 col-md-4">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-body">
+                        <h5 class="card-title">Goal Balance</h5>
+                        <p class="card-text text-muted small mb-2">
+                            How your rolling average balance compares to your stated goal.
+                        </p>
+                        <div id="goalBalanceText">
+                            <p class="text-muted mb-0">Loading...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12 col-md-4">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-body">
+                        <h5 class="card-title">Macro Trend</h5>
+                        <p class="card-text text-muted">
+                            Planned next: protein/carbs/fat as a % of target, trended over the same rolling window.
+                        </p>
+                        <div class="placeholder-glow">
+                            <span class="placeholder col-7"></span>
+                            <span class="placeholder col-10"></span>
+                            <span class="placeholder col-5"></span>
+                        </div>
+                        <p class="mt-3"><strong><i>(Future feature)</i></strong></p>
+                    </div>
+                </div>
+            </div>
         </div>
     `;
 }

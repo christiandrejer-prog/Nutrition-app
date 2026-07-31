@@ -2,9 +2,25 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from app.services.intake_history import MacroAverages
 
+
+# Thermic effect of food (TEF) rates: the energy cost of digesting each
+# macronutrient, as a fraction of that macro's own energy. Protein has the
+# highest cost (commonly cited range 20-30%), carbs a moderate cost (5-10%),
+# fat the lowest (0-3%). Midpoints are used here.
 PROTEIN_THERMIC_EFFECT_RATE = 0.25
+CARBS_THERMIC_EFFECT_RATE = 0.075
+FAT_THERMIC_EFFECT_RATE = 0.02
+
 KCAL_PER_GRAM_PROTEIN = 4.0
+KCAL_PER_GRAM_CARBS = 4.0
+KCAL_PER_GRAM_FAT = 9.0
+
+# Minimum distinct logged days before trusting the actual macro average over
+# the manually-entered protein target, and how far back to average over.
+MIN_HISTORY_DAYS_FOR_TEF = 3
+TEF_HISTORY_WINDOW_DAYS = 14
 
 BASELINE_ACTIVITY_FACTORS = {
     "sedentary": 1.2,
@@ -69,17 +85,18 @@ def calculate_activity_kcal_per_week(
     return total
 
 
-def calculate_protein_thermic_effect_kcal_per_day(
+def calculate_thermic_effect_kcal_per_day(
     *,
     protein_grams_per_day: float,
-    rate: float = PROTEIN_THERMIC_EFFECT_RATE,
+    carbs_grams_per_day: float = 0.0,
+    fat_grams_per_day: float = 0.0,
 ) -> float:
-    """Estimate protein thermic effect.
-
-    Protein has a high thermic effect of food. A 25% midpoint is used here,
-    inside the commonly cited 20-30% range.
-    """
-    return protein_grams_per_day * KCAL_PER_GRAM_PROTEIN * rate
+    """Estimate the full thermic effect of food (TEF) across all 3 macros."""
+    return (
+        protein_grams_per_day * KCAL_PER_GRAM_PROTEIN * PROTEIN_THERMIC_EFFECT_RATE
+        + carbs_grams_per_day * KCAL_PER_GRAM_CARBS * CARBS_THERMIC_EFFECT_RATE
+        + fat_grams_per_day * KCAL_PER_GRAM_FAT * FAT_THERMIC_EFFECT_RATE
+    )
 
 
 def calculate_macro_targets(
@@ -142,6 +159,7 @@ def calculate_maintenance(
     goal: str,
     activity_sessions: list[ActivitySession] | None = None,
     direct_activity_kcal_per_week: float = 0.0,
+    trailing_macro_averages: MacroAverages | None = None,
 ) -> dict[str, float | str | list[dict[str, float | str]]]:
     bmr = calculate_bmr_mifflin_st_jeor(
         sex=sex,
@@ -160,15 +178,29 @@ def calculate_maintenance(
     total_activity_kcal_per_week = scheduled_activity_kcal_per_week + direct_activity_kcal_per_week
     activity_kcal_per_day = total_activity_kcal_per_week / 7
 
-    protein_tef_kcal_per_day = calculate_protein_thermic_effect_kcal_per_day(
-        protein_grams_per_day=protein_grams_per_day,
+    has_enough_history = (
+        trailing_macro_averages is not None
+        and trailing_macro_averages.days_counted >= MIN_HISTORY_DAYS_FOR_TEF
     )
+    if has_enough_history:
+        thermic_effect_kcal_per_day = calculate_thermic_effect_kcal_per_day(
+            protein_grams_per_day=trailing_macro_averages.protein_grams_per_day,
+            carbs_grams_per_day=trailing_macro_averages.carbs_grams_per_day,
+            fat_grams_per_day=trailing_macro_averages.fat_grams_per_day,
+        )
+        thermic_effect_source = "logged_history"
+    else:
+        thermic_effect_kcal_per_day = calculate_thermic_effect_kcal_per_day(
+            protein_grams_per_day=protein_grams_per_day,
+        )
+        thermic_effect_source = "manual_protein_input"
+
     goal_adjustment_kcal_per_day = GOAL_ADJUSTMENTS[goal]
 
     daily_maintenance_kcal = (
         baseline_living_kcal_per_day
         + activity_kcal_per_day
-        + protein_tef_kcal_per_day
+        + thermic_effect_kcal_per_day
     )
     daily_target_kcal = daily_maintenance_kcal + goal_adjustment_kcal_per_day
     macro_targets = calculate_macro_targets(
@@ -178,7 +210,7 @@ def calculate_maintenance(
     )
 
     return {
-        "method": "Mifflin-St Jeor BMR + baseline activity + net MET activity/direct activity kcal + protein TEF",
+        "method": "Mifflin-St Jeor BMR + baseline activity + net MET activity/direct activity kcal + thermic effect of food",
         "bmr_kcal_per_day": round(bmr, 1),
         "baseline_activity_factor": baseline_factor,
         "baseline_living_kcal_per_day": round(baseline_living_kcal_per_day, 1),
@@ -187,7 +219,9 @@ def calculate_maintenance(
         "total_activity_kcal_per_week": round(total_activity_kcal_per_week, 1),
         "scheduled_activity_kcal_per_day": round(activity_kcal_per_day, 1),
         "total_activity_kcal_per_day": round(activity_kcal_per_day, 1),
-        "protein_thermic_effect_kcal_per_day": round(protein_tef_kcal_per_day, 1),
+        "thermic_effect_kcal_per_day": round(thermic_effect_kcal_per_day, 1),
+        "thermic_effect_source": thermic_effect_source,
+        "thermic_effect_window_days": TEF_HISTORY_WINDOW_DAYS if has_enough_history else 0,
         "daily_maintenance_kcal": round(daily_maintenance_kcal, 1),
         "weekly_maintenance_kcal": round(daily_maintenance_kcal * 7, 1),
         "goal_adjustment_kcal_per_day": goal_adjustment_kcal_per_day,

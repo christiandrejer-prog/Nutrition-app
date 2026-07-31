@@ -24,6 +24,18 @@ let recipeDrinksCache = [];
 export async function initDrinksDashboard() {
     await Promise.all([loadDrinks(), loadDrinkLists()]);
     bindDashboardControls();
+    updateDeleteToggleButtonLabel();
+}
+
+function updateDeleteToggleButtonLabel() {
+    const btn = document.getElementById("toggle-remove-drink-btn");
+    if (!btn) return;
+
+    if (getState().deleteModes.drinkList) {
+        btn.textContent = "Exit delete mode";
+    } else {
+        btn.textContent = selectedDrinkListId ? "Remove drink" : "Remove drinks list";
+    }
 }
 
 export async function selectDrinkListUI() {
@@ -220,6 +232,7 @@ async function selectDrinkList(listId) {
     await loadDashboardDrinkListsItems(listId);
     await loadDashboardDrinkChart(listId);
     await refreshRecipeCard(listId);
+    updateDeleteToggleButtonLabel();
 }
 
 async function handleCreateDrink() {
@@ -316,13 +329,27 @@ function renderListPicker(container, lists) {
     grid.className = "drink-grid";
 
     lists.forEach(list => {
-        const item = document.createElement("button");
-        item.type = "button";
+        const item = document.createElement("div");
         item.className = "drink-item";
         item.innerHTML = `
             <div class="drink-name">${escapeHtml(list.name)}</div>
             <div class="small text-muted">${escapeHtml(String(list.item_count ?? 0))} items</div>
         `;
+
+        if (getState().deleteModes.drinkList) {
+            const deleteButton = document.createElement("button");
+            deleteButton.type = "button";
+            deleteButton.className = "drink-delete";
+            deleteButton.textContent = "x";
+            deleteButton.addEventListener("click", async event => {
+                event.stopPropagation();
+                if (!await confirmAction(`Delete the drink list "${list.name}"?`)) return;
+                await DrinksAPI.deleteList(list.id);
+                await loadDrinkLists();
+                await loadDashboardDrinkListsItems(null);
+            });
+            item.appendChild(deleteButton);
+        }
 
         item.addEventListener("click", () => selectDrinkList(list.id));
         grid.appendChild(item);
@@ -408,4 +435,5 @@ function hideDrinkHover() {
 export function toggleDrinkListDeleteMode() {
     toggleDrinkListDeleteModeState();
     loadDashboardDrinkListsItems(selectedDrinkListId);
+    updateDeleteToggleButtonLabel();
 }
