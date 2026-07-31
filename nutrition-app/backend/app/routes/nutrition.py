@@ -1,12 +1,16 @@
 from enum import Enum
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
+from sqlalchemy.orm import Session
 
+from app.database.session import get_db
 from app.services.maintenance_calculator import (
     ActivitySession as MaintenanceActivitySession,
+    TEF_HISTORY_WINDOW_DAYS,
     calculate_maintenance,
 )
+from app.services.intake_history import get_trailing_macro_averages
 from app.utils.energy_constants import (
     calculate_bmr,
     calculate_protein_thermic_effect,
@@ -77,7 +81,9 @@ class MaintenanceEstimateResponse(BaseModel):
     total_activity_kcal_per_week: float
     scheduled_activity_kcal_per_day: float
     total_activity_kcal_per_day: float
-    protein_thermic_effect_kcal_per_day: float
+    thermic_effect_kcal_per_day: float
+    thermic_effect_source: str
+    thermic_effect_window_days: int
     daily_maintenance_kcal: float
     weekly_maintenance_kcal: float
     goal_adjustment_kcal_per_day: float
@@ -112,7 +118,9 @@ router = APIRouter(tags=["nutrition"])
 
 
 @router.post("/maintenance", response_model=MaintenanceEstimateResponse)
-def estimate_maintenance(data: MaintenanceEstimateRequest):
+def estimate_maintenance(data: MaintenanceEstimateRequest, db: Session = Depends(get_db)):
+    trailing_macro_averages = get_trailing_macro_averages(db, window_days=TEF_HISTORY_WINDOW_DAYS)
+
     return calculate_maintenance(
         sex=data.sex,
         age=data.age,
@@ -130,6 +138,7 @@ def estimate_maintenance(data: MaintenanceEstimateRequest):
             for session in data.activity_sessions
         ],
         direct_activity_kcal_per_week=data.direct_activity_kcal_per_week,
+        trailing_macro_averages=trailing_macro_averages,
     )
 
 

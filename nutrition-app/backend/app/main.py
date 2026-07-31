@@ -25,6 +25,7 @@ from app.models import (
     drink_garnish,
     intake_entry,
     stock,
+    weight_entry,
 )
 
 app = FastAPI()
@@ -49,6 +50,7 @@ from app.routes.drinks import router as drinks_router
 from app.routes.intake import router as intake_router
 from app.routes.stock import router as stock_router
 from app.routes.garnishes import router as garnishes_router
+from app.routes.weight import router as weight_router
 
 app.include_router(meals_router, prefix="/meals", tags=["meals"])
 app.include_router(users_router, prefix="/users", tags=["users"])
@@ -57,6 +59,7 @@ app.include_router(drinks_router, prefix="/drinks", tags=["drinks"])
 app.include_router(intake_router, prefix="/intake", tags=["intake"])
 app.include_router(stock_router, prefix="/stock", tags=["stock"])
 app.include_router(garnishes_router, prefix="/garnishes", tags=["garnishes"])
+app.include_router(weight_router, prefix="/weight", tags=["weight"])
 
 @app.on_event("startup")
 def on_startup():

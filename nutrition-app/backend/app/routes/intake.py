@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, timedelta
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -11,12 +11,18 @@ from app.models.food_nutrient import FoodNutrient
 from app.models.nutrient import Nutrient
 from app.models.food import Food
 from app.utils.energy_constants import calculate_energy_from_macros
+from app.services.intake_history import get_daily_totals, zero_fill_range
+from app.services.energy_balance import calculate_energy_balance
 from app.schemas.intake_schema import (
     IntakeEntryCreate,
     IntakeEntryResponse,
     IntakeSummaryResponse,
     IntakeDateResponse,
+    IntakeDayTotalResponse,
+    EnergyBalanceResponse,
 )
+
+MAX_RANGE_DAYS = 92
 
 router = APIRouter(tags=["Intake"])
 
@@ -134,4 +140,46 @@ def get_intake_summary(intake_date: date = Query(None), db: Session = Depends(ge
         "total_fat": float(totals.fat),
         "total_calories": float(totals.calories),
         "entries": int(totals.entries),
+    }
+
+
+@router.get("/range", response_model=list[IntakeDayTotalResponse])
+def get_intake_range(
+    start_date: date = Query(...),
+    end_date: date = Query(...),
+    db: Session = Depends(get_db),
+):
+    if end_date < start_date:
+        raise HTTPException(status_code=400, detail="end_date must be on or after start_date")
+    if (end_date - start_date).days + 1 > MAX_RANGE_DAYS:
+        raise HTTPException(status_code=400, detail=f"Range cannot exceed {MAX_RANGE_DAYS} days")
+
+    totals_by_date = get_daily_totals(db, start_date, end_date)
+    return zero_fill_range(start_date, end_date, totals_by_date)
+
+
+@router.get("/energy-balance", response_model=EnergyBalanceResponse)
+def get_energy_balance(
+    daily_maintenance_kcal: float = Query(..., gt=0, le=20000),
+    window_days: int = Query(7, ge=2, le=90),
+    db: Session = Depends(get_db),
+):
+    end_date = date.today()
+    start_date = end_date - timedelta(days=window_days - 1)
+
+    totals_by_date = get_daily_totals(db, start_date, end_date)
+    daily_totals = zero_fill_range(start_date, end_date, totals_by_date)
+
+    balance = calculate_energy_balance(
+        daily_calories=[day["total_calories"] for day in daily_totals],
+        daily_maintenance_kcal=daily_maintenance_kcal,
+    )
+
+    return {
+        "window_days": window_days,
+        "start_date": start_date,
+        "end_date": end_date,
+        "daily_maintenance_kcal": daily_maintenance_kcal,
+        "daily_totals": daily_totals,
+        **balance,
     }

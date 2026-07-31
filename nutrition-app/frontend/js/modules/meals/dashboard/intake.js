@@ -5,7 +5,7 @@ import {
     getDailyTargetKcal,
     getMacroTargets,
     MAINTENANCE_RESULT_EVENT
-} from "./maintenance.js?v=20260529-macro-reference";
+} from "./maintenance.js";
 
 let intakeSummary = null;
 

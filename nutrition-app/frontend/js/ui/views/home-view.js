@@ -38,7 +38,11 @@ const CHECKLIST = [
             { text: "Split the single-page frontend into separate pages instead of everything in one place", status: "planned" },
             { text: "Add a way to view the history of a food, meal, drink, or drink-list (when it was created, when it was edited, and what changed)", status: "planned" },
             { text: "When deleting an item, show the item that is being deleted - now its just delete this drink / food / meal", status: "planned" },
-            { text: "Make the edit modals more user-friendly. No big layout change, more intuitive interactions and more simplistic/minimalistic", status: "planned"}
+            { text: "Make the edit modals more user-friendly. No big layout change, more intuitive interactions and more simplistic/minimalistic", status: "planned"},
+            { text: "Fix Cancel buttons actually being back buttons", status: "planned" },
+            { text: "When viewing items in seach then it should say what item is being viewed on the modal", status: "planned" },
+            { text: "Make a toast notification for when something isnt posstible e.g. adding over 100g of a nutrient to a food pr. 100 grams", status: "planned" },
+            { text: "Keep future per-unit/per-liter graph plans in mind while coding new chart features", status: "planned" }
         ]
     },
     {
@@ -49,7 +53,15 @@ const CHECKLIST = [
             { text: "Nutrient editor: show the actual nutrient name (not 'nutrient x'), and add an 'Add nutrient' button next to Save Macros to pick one from the database or create a new nutrient entry", status: "wip" },
             { text: "Consumed meals list: show just the meal name + HH:MM timestamp, reveal macros/kcal on hover for a more compact card", status: "planned" },
             { text: "Swap the sidebar's meal-add button icon from a plus to a meal icon", status: "planned" },
-            { text: "Today's Intake: replace 'view intake details' with a macro pie chart underneath, hover a wedge for its numeric + percentage value", status: "planned" }
+            { text: "Today's Intake: replace 'view intake details' with a macro pie chart underneath, hover a wedge for its numeric + percentage value", status: "planned" },
+            { text: "Make the nutrient viewing better, so its looks more like a food label", status: "planned" },
+            { text: "Renamed 'Daily Target' to 'Energy Target' with a Daily/Weekly toggle, a 24-hour cumulative-intake chart (daily) and a 7-day today±3 chart (weekly)", status: "done" },
+            { text: "Confidence interval band around the energy target line, toggle on the dashboard + width configurable in Settings", status: "done" },
+            { text: "TEF is now calculated from actually-logged macros (protein+carbs+fat) once >=3 days are logged, falling back to the manual protein input otherwise", status: "done" },
+            { text: "History tab: replaced the placeholder 'Kcal History' with a real rolling 7-day Energy Balance card (surplus one day cancels a deficit the next, instead of judging each day alone) and a real Goal Balance card", status: "done" },
+            { text: "Added basic weight logging (Planning tab) as groundwork for a future fully-adaptive, weight-trend-calibrated maintenance estimate", status: "done" },
+            { text: "Planned: true adaptive TDEE calibration - use logged weight trend vs. logged intake to correct the Mifflin-St Jeor estimate over time, once enough weight history exists", status: "planned" },
+            { text: "Macro Trend (History tab): protein/carbs/fat as a % of target, trended over the same rolling window - still a placeholder", status: "planned" }
         ]
     },
     {
@@ -74,7 +86,8 @@ const CHECKLIST = [
             { text: "In Drink Prep, when deleting through the delete button, no confirmation is shown", status: "fixed"},
             { text: "Update drinks so a drink can take different types of spirits - not just the specific one used in the drink editor. E.g. Gin and Gin 40% can both be used for a drink needing Gin", status: "planned"},
             { text: "Fixed: Aperol Spritz was missing Aperol itself as an ingredient", status: "fixed"},
-            { text: "Add a 'Maritime Party' drink list (nautical/rum-forward theme: Painkiller, Navy Grog, Hurricane, Rum Runner, Bahama Mama, Blue Hawaiian, plus Dark 'n Stormy, Sea Breeze, Blue Lagoon, Salty Dog, Mai Tai, Zombie)", status: "done"}
+            { text: "Add a 'Maritime Party' drink list (nautical/rum-forward theme: Painkiller, Navy Grog, Hurricane, Rum Runner, Bahama Mama, Blue Hawaiian, plus Dark 'n Stormy, Sea Breeze, Blue Lagoon, Salty Dog, Mai Tai, Zombie)", status: "done"},
+            { text: "Maybe add a way to deselect a drinks list", status: "idea"}
         ]
     },
     {
@@ -90,13 +103,18 @@ const CHECKLIST = [
         ]
     },
     {
-        title: "Nutrition & Data",
+        title: "Barcode Scanning & Product Database",
         items: [
             { text: "Check/extend barcode scanning functionality", status: "planned" },
-            { text: "Find a database of Danish products with barcodes and metadata for the general database", status: "planned" },
-            { text: "Expand 'nutrients' to include micro nutrients (sodium, caffeine, creatine, etc.) and implement throughout the app", status: "planned" },
+            { text: "Find a database of Danish products with barcodes and metadata for the general database", status: "planned" }
+        ]
+    },
+    {
+        title: "Nutrition & Calculations",
+        items: [
             { text: "Build a 'Calculate maintenance' sidebar page: weekly-averaged (not just daily) kcal calculation, science-based, accounting for activity level and protein intake", status: "planned" },
-            { text: "Keep future per-unit/per-liter graph plans in mind while coding new chart features", status: "planned" }
+            { text: "Expand 'nutrients' to include micro nutrients (sodium, caffeine, creatine, etc.) and implement throughout the app", status: "planned" },
+            { text: "Add fiber's nutritional value", status: "planned" }
         ]
     },
     {
